@@ -10,7 +10,6 @@
 
   <title>CM - Career Mode</title>
 
-  <!-- PWA Settings -->
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,7 +20,6 @@
   <link rel="apple-touch-icon" sizes="180x180" href="logo-512.png">
   <link rel="icon" type="image/svg+xml" href="Logo CM.svg">
 
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -89,12 +87,13 @@
     .task-item {
       transition: background-color 0.15s ease;
     }
-    /* Safe Area Ajustada para iPhone */
     header {
-      padding-top: max(1rem, env(safe-area-inset-top));
+      padding-top: max(0.75rem, env(safe-area-inset-top));
     }
+    /* Alinhamento perfeito na borda inferior cobrindo a barra de gestos do iPhone */
     .safe-bottom-nav {
-      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+      height: 4.2rem;
     }
   </style>
 </head>
@@ -227,7 +226,7 @@
     </header>
 
     <!-- Conteúdo das Abas -->
-    <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8 flex flex-col justify-between" id="main-content-container">
+    <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 flex flex-col justify-between" id="main-content-container">
       <div class="space-y-6">
         
         <!-- TAB 1: INÍCIO -->
@@ -422,8 +421,8 @@
       </footer>
     </div>
 
-    <!-- Navegação Inferior Mobile Corrigida -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-card border-t border-gray-800 px-2 py-2 safe-bottom-nav flex justify-around items-center z-30" id="mobile-nav"></nav>
+    <!-- Navegação Inferior Mobile Ajustada -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-card border-t border-gray-800 px-2 pt-2 safe-bottom-nav flex justify-around items-center z-30" id="mobile-nav"></nav>
   </main>
 
   <!-- MODAL: ONBOARDING / LOGIN -->
@@ -559,7 +558,6 @@
   <script>
     let swRegistration = null;
 
-    // Registrar Service Worker para notificações em segundo plano
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then(reg => {
         swRegistration = reg;
@@ -642,7 +640,7 @@
     ];
 
     let appData = {
-      version: '3.4',
+      version: '3.5',
       user: { name: '', email: '', password: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
       tasks: [],
       alarms: [],
@@ -707,6 +705,7 @@
             body: body,
             icon: 'Logo CM.svg',
             badge: 'Logo CM.svg',
+            data: { url: window.location.origin + window.location.pathname },
             vibrate: [200, 100, 200]
           });
         } else {
@@ -913,8 +912,8 @@
       `).join('');
 
       document.getElementById('mobile-nav').innerHTML = navItems.map(item => `
-        <button type="button" data-tab="${item.id}" class="nav-btn-mobile flex flex-col items-center justify-center py-1 px-3 rounded-xl text-xs font-medium transition-all ${activeTab === item.id ? 'text-cyan-400 font-bold' : 'text-gray-500'}">
-          <i data-lucide="${item.icon}" class="w-5 h-5 mb-1"></i>
+        <button type="button" data-tab="${item.id}" class="nav-btn-mobile flex flex-col items-center justify-center py-1 px-2 rounded-xl text-xs font-medium transition-all ${activeTab === item.id ? 'text-cyan-400 font-bold' : 'text-gray-500'}">
+          <i data-lucide="${item.icon}" class="w-5 h-5 mb-0.5"></i>
           ${item.label}
         </button>
       `).join('');
