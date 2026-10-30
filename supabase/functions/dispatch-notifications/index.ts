@@ -25,7 +25,7 @@ Deno.serve(async (request) => {
   );
 
   const { data: schedules, error } = await admin.from("notification_schedules")
-    .select("id,user_id,source_id,title,body,local_time,time_zone,last_sent_date").eq("enabled", true);
+    .select("id,user_id,source_id,title,body,local_time,time_zone,app_url,last_sent_date").eq("enabled", true);
   if (error) return Response.json({ error: "Could not load schedules" }, { status: 500 });
 
   const now = new Date();
@@ -45,7 +45,7 @@ Deno.serve(async (request) => {
     for (const sub of subscriptions || []) {
       try {
         await webpush.sendNotification({ endpoint:sub.endpoint, keys:{p256dh:sub.p256dh,auth:sub.auth} },
-          JSON.stringify({ title:schedule.title, body:schedule.body, tag:schedule.source_id, url:"/" }));
+          JSON.stringify({ title:schedule.title, body:schedule.body, tag:schedule.source_id, url:schedule.app_url || "/" }));
         delivered = true; sent++;
       } catch (error) {
         const status = (error as {statusCode?:number}).statusCode;
