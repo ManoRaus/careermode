@@ -455,6 +455,13 @@
             </button>
           </div>
           <div class="glass-card p-5 rounded-2xl border border-cyan-500/25 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h4 class="font-bold text-white">Notificações do dispositivo</h4>
+                <p class="text-xs text-gray-400 mt-1">Ative ou reative o envio de avisos em segundo plano neste aparelho.</p>
+              </div>
+              <button type="button" id="btn-enable-push" class="px-4 py-2.5 bg-cyan-500 text-gray-950 rounded-xl text-xs font-extrabold">Ativar notificações</button>
+            </div>
             <div>
               <h4 class="font-bold text-white">Lembrete de Check-in Diário</h4>
               <p class="text-xs text-gray-400 mt-1">Receba um lembrete mesmo quando o Career Mode estiver fechado.</p>
@@ -938,6 +945,10 @@
     }
 
     async function requestNotificationPermission() {
+      if (!isPushConfigured()) {
+        showToast('Configuração pendente', 'O serviço de notificações ainda precisa ser conectado ao Supabase.');
+        return;
+      }
       if (!('Notification' in window)) {
         showToast('Recurso indisponível', 'Este navegador não oferece suporte a notificações.');
         return;
@@ -1060,6 +1071,7 @@
 
     function initGlobalEventListeners() {
       document.getElementById('btn-allow-notifications').addEventListener('click', requestNotificationPermission);
+      document.getElementById('btn-enable-push').addEventListener('click', requestNotificationPermission);
       document.getElementById('btn-save-checkin-reminder').addEventListener('click', saveCheckinReminderSettings);
       document.getElementById('btn-confirm-yes').addEventListener('click', () => {
         if (pendingDeleteAction) pendingDeleteAction();
