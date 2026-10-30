@@ -63,8 +63,8 @@
     }
     
     html, body {
-      height: 100% !important;
-      width: 100% !important;
+      height: 100dvh !important;
+      width: 100vw !important;
       overscroll-behavior-y: none;
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
@@ -92,13 +92,12 @@
       transition: background-color 0.15s ease;
     }
     
-    /* FIXAÇÃO RÍGIDA DO CABEÇALHO PARA IPHONE */
     header {
-      padding-top: calc(env(safe-area-inset-top, 20px) + 0.5rem) !important;
-      padding-bottom: 0.75rem !important;
+      padding-top: calc(env(safe-area-inset-top, 16px) + 0.25rem) !important;
+      padding-bottom: 0.5rem !important;
     }
     
-    /* FIXAÇÃO RÍGIDA DA BARRA INFERIOR NA BASE DA TELA */
+    /* BARRA INFERIOR EXATAMENTE NA BORDA SEM FAIXA PRETA */
     #mobile-nav {
       position: fixed !important;
       bottom: 0 !important;
@@ -106,15 +105,16 @@
       right: 0 !important;
       width: 100% !important;
       margin: 0 !important;
-      padding-top: 8px !important;
-      padding-bottom: max(env(safe-area-inset-bottom, 8px), 8px) !important;
+      padding-top: 6px !important;
+      /* Preenche perfeitamente a área segura inferior aproveitando o espaço nativo */
+      padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px) !important;
       background-color: #111827 !important;
-      border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
       z-index: 9999 !important;
     }
 
     #main-content-container {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem) !important;
+      padding-bottom: 5rem !important;
     }
 
     input, select, textarea {
@@ -446,7 +446,7 @@
       </footer>
     </div>
 
-    <!-- Navegação Inferior Mobile Fixada na Borda -->
+    <!-- Navegação Inferior Mobile Perfeitamente Fixada -->
     <nav class="md:hidden flex justify-around items-center" id="mobile-nav"></nav>
   </main>
 
@@ -665,7 +665,7 @@
     ];
 
     let appData = {
-      version: '3.9',
+      version: '4.0',
       user: { name: '', email: '', password: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
       tasks: [],
       alarms: [],
