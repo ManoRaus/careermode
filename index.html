@@ -66,8 +66,6 @@
       width: 100% !important;
       height: 100% !important;
       min-height: 0;
-      position: fixed;
-      inset: 0;
       overflow: hidden;
       overscroll-behavior: none;
       -webkit-tap-highlight-color: transparent;
@@ -76,22 +74,39 @@
       touch-action: manipulation;
       margin: 0;
       padding: 0;
-      background-color: #090d16;
     }
 
-    /* Safari/iOS: acompanha a altura real da tela no modo Web App */
+    /* O html fornece a cor da área que o WebKit pode reservar no modo standalone. */
+    html {
+      background-color: #111827 !important;
+    }
+
+    body {
+      height: 100vh !important;
+      min-height: 100vh !important;
+      background-color: #090d16 !important;
+    }
+
+    /* Safari em aba usa a altura dinâmica; no app instalado, 100vh evita
+       o recorte inferior associado ao viewport-fit=cover no WebKit. */
     @supports (height: 100dvh) {
       html, body {
         height: 100dvh !important;
       }
     }
 
-    body {
-      min-height: 0;
+    @media (display-mode: standalone) {
+      html, body {
+        height: 100vh !important;
+      }
+      html {
+        background-color: #111827 !important;
+      }
     }
 
     main {
       min-height: 0;
+      background-color: #090d16;
     }
     body {
       font-family: 'Inter', sans-serif;
@@ -162,6 +177,16 @@
       max-width: 100%;
     }
 
+    /* WebKit/iOS 26 calcula incorretamente a largura de inputs date/time
+       com padding. O recuo visual é feito por text-indent, sem padding. */
+    input[type="time"],
+    input[type="date"] {
+      padding: 0 !important;
+      text-indent: 12px;
+      height: 42px;
+      line-height: 42px;
+    }
+
     #alarm-time {
       display: block;
       width: 100% !important;
@@ -171,8 +196,6 @@
       min-inline-size: 0;
       box-sizing: border-box !important;
       font-size: 16px;
-      padding-left: 12px;
-      padding-right: 12px;
     }
 
     @media (max-width: 767px) {
