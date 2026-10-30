@@ -21,6 +21,8 @@
   <link rel="icon" type="image/svg+xml" href="Logo CM.svg">
 
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -228,7 +230,7 @@
       <div class="space-y-3 text-center">
         <h3 class="text-xl font-extrabold text-white font-heading">Ativar Notificações</h3>
         <p class="text-xs text-gray-300 leading-relaxed">
-          Para receber avisos de alarmes e lembretes de Check-in no seu dispositivo, ative as notificações.
+          Ative as notificações para receber alarmes e lembretes de Check-in mesmo quando o Career Mode estiver fechado.
         </p>
       </div>
       <div class="flex gap-3 pt-2">
@@ -451,6 +453,24 @@
             <button id="btn-open-alarm-modal" class="px-4 py-2.5 bg-cyan-500 text-gray-950 font-bold rounded-xl text-sm flex items-center gap-2">
               <i data-lucide="plus" class="w-4 h-4"></i> Novo Alarme
             </button>
+          </div>
+          <div class="glass-card p-5 rounded-2xl border border-cyan-500/25 space-y-4">
+            <div>
+              <h4 class="font-bold text-white">Lembrete de Check-in Diário</h4>
+              <p class="text-xs text-gray-400 mt-1">Receba um lembrete mesmo quando o Career Mode estiver fechado.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+              <label class="flex items-center gap-2 text-sm text-gray-300">
+                <input id="checkin-reminder-enabled" type="checkbox" class="!w-4 !h-4 accent-cyan-500">
+                Ativar lembrete diário
+              </label>
+              <div class="flex items-center gap-2 sm:ml-auto">
+                <label for="checkin-reminder-time" class="text-xs text-gray-400">Horário</label>
+                <input id="checkin-reminder-time" type="time" value="20:00" class="!w-32 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white">
+                <button type="button" id="btn-save-checkin-reminder" class="px-3 py-2 bg-cyan-500 text-gray-950 rounded-lg text-xs font-bold">Salvar</button>
+              </div>
+            </div>
+            <p class="text-[11px] text-gray-500">Horário padrão: 20:00. Você pode alterá-lo quando quiser.</p>
           </div>
           <div class="space-y-3" id="alarms-list-container"></div>
         </section>
@@ -755,6 +775,7 @@
       alarms: [],
       journal: [],
       checkin: { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 },
+      notifications: { checkinEnabled: true, checkinTime: '20:00' },
       historyMonths: [],
       lastActiveDate: new Date().toDateString()
     };
@@ -766,6 +787,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       loadLocalStorageData();
       checkDailyReset();
+      initializePushBackend();
       renderNavigation();
       updateDateDisplays();
       startAlarmChecker();
@@ -787,6 +809,124 @@
       renderAll();
     });
 
+    let supabaseClient = null;
+    let pushAuthUserId = null;
+
+    function isPushConfigured() {
+      const config = window.CAREER_MODE_SUPABASE;
+      return !!(config && config.url && config.anonKey && config.vapidPublicKey &&
+        !config.url.includes('YOUR_PROJECT') && !config.anonKey.includes('YOUR_') &&
+        !config.vapidPublicKey.includes('YOUR_'));
+    }
+
+    function getLocalTimeZone() {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo';
+    }
+
+    async function initializePushBackend() {
+      if (!isPushConfigured() || !window.supabase?.createClient) return;
+      try {
+        const config = window.CAREER_MODE_SUPABASE;
+        supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session?.user) {
+          pushAuthUserId = session.user.id;
+          await syncPushSchedules();
+        }
+      } catch (error) {
+        console.warn('Push do Career Mode ainda não configurado:', error);
+      }
+    }
+
+    function base64UrlToUint8Array(base64Url) {
+      const padding = '='.repeat((4 - base64Url.length % 4) % 4);
+      const raw = atob((base64Url + padding).replace(/-/g, '+').replace(/_/g, '/'));
+      return Uint8Array.from([...raw].map(character => character.charCodeAt(0)));
+    }
+
+    async function subscribeToPushNotifications() {
+      if (!isPushConfigured()) {
+        showToast('Configuração pendente', 'O backend de notificações ainda precisa ser conectado.');
+        return false;
+      }
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        showToast('Recurso indisponível', 'Este navegador não oferece suporte a notificações push.');
+        return false;
+      }
+      const config = window.CAREER_MODE_SUPABASE;
+      if (!supabaseClient) supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+
+      let { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) {
+        const signIn = await supabaseClient.auth.signInAnonymously();
+        if (signIn.error) throw signIn.error;
+        session = signIn.data.session;
+      }
+      pushAuthUserId = session.user.id;
+
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: base64UrlToUint8Array(config.vapidPublicKey)
+        });
+      }
+      const json = subscription.toJSON();
+      const { error } = await supabaseClient.from('push_subscriptions').upsert({
+        user_id: pushAuthUserId,
+        endpoint: json.endpoint,
+        p256dh: json.keys.p256dh,
+        auth: json.keys.auth,
+        expiration_time: json.expirationTime ? new Date(json.expirationTime).toISOString() : null
+      }, { onConflict: 'endpoint' });
+      if (error) throw error;
+      await syncPushSchedules();
+      return true;
+    }
+
+    async function syncPushSchedules() {
+      if (!supabaseClient || !pushAuthUserId) return;
+      const timeZone = getLocalTimeZone();
+      const schedules = (appData.alarms || []).map(alarm => ({
+        user_id: pushAuthUserId,
+        source_id: 'alarm:' + alarm.id,
+        title: 'Career Mode • ' + normalizeTaskTitle(alarm.title),
+        body: 'Seu alarme está programado para agora.',
+        local_time: alarm.time,
+        time_zone: timeZone,
+        enabled: true
+      }));
+      const reminder = appData.notifications || { checkinEnabled: true, checkinTime: '20:00' };
+      schedules.push({
+        user_id: pushAuthUserId,
+        source_id: 'checkin-daily',
+        title: 'Hora do seu Check-in! 🎯',
+        body: 'Reserve um momento para registrar seu progresso de hoje no Career Mode.',
+        local_time: reminder.checkinTime || '20:00',
+        time_zone: timeZone,
+        enabled: reminder.checkinEnabled !== false
+      });
+      const { error } = await supabaseClient.from('notification_schedules').upsert(
+        schedules, { onConflict: 'user_id,source_id' }
+      );
+      if (error) throw error;
+    }
+
+    async function saveCheckinReminderSettings() {
+      const enabled = document.getElementById('checkin-reminder-enabled').checked;
+      const time = document.getElementById('checkin-reminder-time').value || '20:00';
+      appData.notifications = { checkinEnabled: enabled, checkinTime: time };
+      saveLocalStorageData();
+      try {
+        await syncPushSchedules();
+        showToast('Lembrete salvo', enabled ? 'Check-in diário às ' + time + '.' : 'Lembrete diário desativado.');
+      } catch (error) {
+        console.error('Erro ao sincronizar lembrete:', error);
+        showToast('Salvo neste dispositivo', 'Conecte as notificações push para sincronizar o lembrete.');
+      }
+    }
+
     function checkNotificationPermission() {
       if ('Notification' in window) {
         if (Notification.permission === 'default') {
@@ -795,15 +935,27 @@
       }
     }
 
-    function requestNotificationPermission() {
-      if ('Notification' in window) {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            showToast("Notificações Ativadas", "Você receberá avisos em tempo real.");
-            sendNativeNotification("Career Mode", "Notificações ativadas com sucesso!");
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        showToast('Recurso indisponível', 'Este navegador não oferece suporte a notificações.');
+        return;
+      }
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          const subscribed = await subscribeToPushNotifications();
+          if (subscribed) {
+            showToast('Notificações ativadas', 'O Career Mode poderá enviar lembretes em segundo plano.');
+            sendNativeNotification('Career Mode', 'Notificações ativadas com sucesso!');
           }
-          closeModal('modal-notif-permission');
-        });
+        } else {
+          showToast('Permissão não concedida', 'Ative as notificações nas configurações do dispositivo.');
+        }
+      } catch (error) {
+        console.error('Falha ao ativar notificações:', error);
+        showToast('Não foi possível ativar', 'Verifique a configuração de notificações e tente novamente.');
+      } finally {
+        closeModal('modal-notif-permission');
       }
     }
 
@@ -830,6 +982,7 @@
           const parsed = JSON.parse(saved);
           appData = { ...appData, ...parsed };
           if (!appData.checkin) appData.checkin = { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 };
+          if (!appData.notifications) appData.notifications = { checkinEnabled: true, checkinTime: '20:00' };
         } catch (e) {}
       }
     }
@@ -904,6 +1057,7 @@
 
     function initGlobalEventListeners() {
       document.getElementById('btn-allow-notifications').addEventListener('click', requestNotificationPermission);
+      document.getElementById('btn-save-checkin-reminder').addEventListener('click', saveCheckinReminderSettings);
       document.getElementById('btn-confirm-yes').addEventListener('click', () => {
         if (pendingDeleteAction) pendingDeleteAction();
         closeConfirmModal();
@@ -1259,11 +1413,11 @@
       });
     }
 
-    function escapeHtml(text) {
-      if (!text) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+      return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[character]);
     }
 
     function renderTaskManager() {
@@ -1349,29 +1503,49 @@
       });
     }
 
+    function normalizeTaskTitle(value) {
+      // NFC unifica sequências Unicode equivalentes sem remover emojis,
+      // modificadores de tom de pele, bandeiras ou sequências ZWJ.
+      return String(value ?? '').normalize('NFC').trim();
+    }
+
     function handleSaveTask(e) {
       e.preventDefault();
-      playSound('success');
       const editId = document.getElementById('edit-task-id').value;
-      const title = document.getElementById('task-title').value.trim();
+      const titleInput = document.getElementById('task-title');
+      const title = normalizeTaskTitle(titleInput.value);
       const category = document.getElementById('task-category').value;
       const points = categoryPointsMap[category] || 5;
 
-      if (editId) {
-        const task = appData.tasks.find(t => t.id === editId);
-        if (task) {
-          task.title = title;
-          task.category = category;
-          task.points = points;
-        }
-      } else {
-        appData.tasks.push({ id: 'task_' + Date.now(), title, category, points, completedToday: false });
+      if (!title) {
+        titleInput.setCustomValidity('Informe um título para a tarefa.');
+        titleInput.reportValidity();
+        titleInput.setCustomValidity('');
+        return;
       }
 
-      saveLocalStorageData();
-      closeModal('modal-task');
-      renderAll();
-      showToast("Sucesso!", editId ? "Tarefa atualizada." : "Nova tarefa adicionada.");
+      try {
+        if (!Array.isArray(appData.tasks)) appData.tasks = [];
+        if (editId) {
+          const task = appData.tasks.find(t => t.id === editId);
+          if (task) {
+            task.title = title;
+            task.category = category;
+            task.points = points;
+          }
+        } else {
+          appData.tasks.push({ id: 'task_' + Date.now(), title, category, points, completedToday: false });
+        }
+
+        saveLocalStorageData();
+        closeModal('modal-task');
+        renderAll();
+        playSound('success');
+        showToast("Sucesso!", editId ? "Tarefa atualizada." : "Nova tarefa adicionada.");
+      } catch (error) {
+        console.error('Erro ao salvar tarefa:', error);
+        showToast("Não foi possível salvar", "Tente novamente. Seus dados anteriores foram preservados.");
+      }
     }
 
     function renderRankingTab() {
@@ -1404,6 +1578,11 @@
     }
 
     function renderAlarmsTab() {
+      const reminder = appData.notifications || { checkinEnabled: true, checkinTime: '20:00' };
+      const enabledInput = document.getElementById('checkin-reminder-enabled');
+      const timeInput = document.getElementById('checkin-reminder-time');
+      if (enabledInput) enabledInput.checked = reminder.checkinEnabled !== false;
+      if (timeInput) timeInput.value = reminder.checkinTime || '20:00';
       const container = document.getElementById('alarms-list-container');
       const alarms = appData.alarms || [];
       if (alarms.length === 0) { container.innerHTML = `<p class="text-xs text-gray-500">Nenhum alarme configurado.</p>`; return; }
@@ -1449,6 +1628,9 @@
       showConfirmModal("Deseja excluir este alarme?", () => {
         playSound('delete');
         appData.alarms = appData.alarms.filter(a => a.id !== almId);
+        if (supabaseClient && pushAuthUserId) {
+          supabaseClient.from('notification_schedules').delete().eq('user_id', pushAuthUserId).eq('source_id', 'alarm:' + almId).then(() => {});
+        }
         saveLocalStorageData();
         renderAlarmsTab();
         showToast("Alarme Removido", "");
@@ -1473,6 +1655,7 @@
       }
 
       saveLocalStorageData();
+      syncPushSchedules().catch(error => console.warn('Não foi possível sincronizar alarme push:', error));
       closeModal('modal-alarm');
       renderAlarmsTab();
       showToast("Sucesso!", editId ? "Alarme atualizado." : "Alarme configurado.");
