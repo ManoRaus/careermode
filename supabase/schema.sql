@@ -43,3 +43,7 @@ create index if not exists notification_schedules_enabled_idx
   on public.notification_schedules (enabled, local_time);
 create index if not exists push_subscriptions_user_id_idx
   on public.push_subscriptions (user_id);
+
+-- Explicit Data API grants (RLS policies above remain the row-level guard).
+grant select, insert, update, delete on public.push_subscriptions to authenticated;
+grant select, insert, update, delete on public.notification_schedules to authenticated;
