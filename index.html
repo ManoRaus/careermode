@@ -10,7 +10,8 @@
 
   <title>CM - Career Mode</title>
 
-  <!-- PWA & Mobile Web App Settings -->
+  <!-- PWA Settings -->
+  <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -59,12 +60,6 @@
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <style>
-    :root {
-      --sat: env(safe-area-inset-top, 0px);
-      --sab: env(safe-area-inset-bottom, 0px);
-      --sal: env(safe-area-inset-left, 0px);
-      --sar: env(safe-area-inset-right, 0px);
-    }
     html, body {
       height: 100%;
       width: 100%;
@@ -73,15 +68,14 @@
       -webkit-touch-callout: none;
       user-select: none;
       touch-action: manipulation;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #090d16;
     }
     body {
       font-family: 'Inter', sans-serif;
-      background-color: #090d16;
       color: #f3f4f6;
-      padding-top: var(--sat);
-      padding-bottom: var(--sab);
-      padding-left: var(--sal);
-      padding-right: var(--sar);
     }
     .font-heading {
       font-family: 'Space Grotesk', sans-serif;
@@ -95,12 +89,16 @@
     .task-item {
       transition: background-color 0.15s ease;
     }
-    .safe-nav-bottom {
-      padding-bottom: max(0.5rem, var(--sab));
+    /* Safe Area Ajustada para iPhone */
+    header {
+      padding-top: max(1rem, env(safe-area-inset-top));
+    }
+    .safe-bottom-nav {
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
   </style>
 </head>
-<body class="h-full flex flex-col md:flex-row overflow-hidden bg-dark-bg text-gray-100 select-none">
+<body class="h-full flex flex-col md:flex-row bg-dark-bg text-gray-100 select-none">
 
   <!-- SPLASH SCREEN -->
   <div id="splash-screen" class="fixed inset-0 bg-[#090d16] z-50 flex flex-col items-center justify-center p-6 text-center space-y-6 transition-opacity duration-300">
@@ -113,16 +111,16 @@
     </div>
   </div>
 
-  <!-- MODAL DE PERMISSÃO DE NOTIFICAÇÃO (PRIMEIRA VEZ) -->
+  <!-- MODAL DE PERMISSÃO DE NOTIFICAÇÃO -->
   <div id="modal-notif-permission" class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[9999] hidden">
     <div class="glass-card w-full max-w-md p-6 md:p-8 rounded-3xl border-2 border-cyan-500 text-center space-y-6 shadow-2xl">
       <div class="w-16 h-16 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto">
         <i data-lucide="bell-ring" class="w-8 h-8"></i>
       </div>
       <div class="space-y-3 text-center">
-        <h3 class="text-xl font-extrabold text-white font-heading">Ativar Notificações Nativas</h3>
+        <h3 class="text-xl font-extrabold text-white font-heading">Ativar Notificações em Tempo Integral</h3>
         <p class="text-xs text-gray-300 leading-relaxed">
-          Para receber avisos de alarmes e lembretes de Check-in em tempo real como mensagens no seu telefone, ative as permissões de notificação.
+          Para receber avisos de alarmes e lembretes de Check-in no seu dispositivo mesmo com o aplicativo fechado, ative as notificações.
         </p>
       </div>
       <div class="flex gap-3 pt-2">
@@ -229,7 +227,7 @@
     </header>
 
     <!-- Conteúdo das Abas -->
-    <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8 flex flex-col justify-between" id="main-content-container">
+    <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8 flex flex-col justify-between" id="main-content-container">
       <div class="space-y-6">
         
         <!-- TAB 1: INÍCIO -->
@@ -259,7 +257,7 @@
             </div>
           </div>
 
-          <!-- WIDGET CHECK-IN DIÁRIO (PONTUAÇÃO AJUSTADA PARA 10 PTS) -->
+          <!-- WIDGET CHECK-IN DIÁRIO -->
           <div class="glass-card p-5 rounded-2xl border border-cyan-500/30 bg-gray-900/50 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
               <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
@@ -268,7 +266,7 @@
               <div>
                 <h4 class="text-sm font-bold text-white">Check-in Diário de Hábito</h4>
                 <p class="text-xs text-gray-400">Registre sua presença diária para manter o foco e ganhar +10 pts.</p>
-                <p class="text-[11px] text-cyan-400 font-semibold mt-1" id="checkin-streak-count">Sequência atual: 0 dias consecutivas</p>
+                <p class="text-[11px] text-cyan-400 font-semibold mt-1" id="checkin-streak-count">Sequência atual: 0 dias consecutivos</p>
               </div>
             </div>
             <button id="btn-do-checkin" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-gray-950 font-extrabold rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2">
@@ -424,8 +422,8 @@
       </footer>
     </div>
 
-    <!-- Navegação Inferior Mobile Ajustada para Safe Areas -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-card border-t border-gray-800 px-2 py-2 safe-nav-bottom flex justify-around items-center z-30" id="mobile-nav"></nav>
+    <!-- Navegação Inferior Mobile Corrigida -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-card border-t border-gray-800 px-2 py-2 safe-bottom-nav flex justify-around items-center z-30" id="mobile-nav"></nav>
   </main>
 
   <!-- MODAL: ONBOARDING / LOGIN -->
@@ -474,7 +472,7 @@
     </div>
   </div>
 
-  <!-- MODAL: TAREFA (CRIAR / EDITAR) -->
+  <!-- MODAL: TAREFA -->
   <div id="modal-task" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
     <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
       <div class="flex justify-between items-center">
@@ -484,7 +482,7 @@
       <form id="form-custom-task" class="space-y-4">
         <input type="hidden" id="edit-task-id">
         <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Título da Tarefa (Aceita Emojis 🎉)</label>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Título da Tarefa</label>
           <input type="text" id="task-title" required placeholder="Ex: Ler livro 📖" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
@@ -507,7 +505,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ALARME (CRIAR / EDITAR) -->
+  <!-- MODAL: ALARME -->
   <div id="modal-alarm" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
     <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
       <div class="flex justify-between items-center">
@@ -517,7 +515,7 @@
       <form id="form-alarm" class="space-y-4">
         <input type="hidden" id="edit-alarm-id">
         <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Título (Aceita Emojis ⏰)</label>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Título</label>
           <input type="text" id="alarm-title" required placeholder="Ex: Hora de focar 🎯" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
@@ -532,7 +530,7 @@
     </div>
   </div>
 
-  <!-- MODAL: DIÁRIO (CRIAR / EDITAR) -->
+  <!-- MODAL: DIÁRIO -->
   <div id="modal-journal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
     <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
       <div class="flex justify-between items-center">
@@ -557,8 +555,17 @@
     </div>
   </div>
 
-  <!-- SCRIPT ENGINE (SUPORTE NATIVO A EMOJIS & EDICÃO) -->
+  <!-- SCRIPT ENGINE -->
   <script>
+    let swRegistration = null;
+
+    // Registrar Service Worker para notificações em segundo plano
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        swRegistration = reg;
+      }).catch(err => {});
+    }
+
     let audioCtx = null;
     function playSound(type) {
       try {
@@ -635,7 +642,7 @@
     ];
 
     let appData = {
-      version: '3.3',
+      version: '3.4',
       user: { name: '', email: '', password: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
       tasks: [],
       alarms: [],
@@ -671,7 +678,6 @@
       }
 
       renderAll();
-      startCheckinNotificationReminder();
     });
 
     function checkNotificationPermission() {
@@ -686,25 +692,26 @@
       if ('Notification' in window) {
         Notification.requestPermission().then(permission => {
           if (permission === 'granted') {
-            showToast("Notificações Ativadas", "Você receberá avisos em tempo real no dispositivo.");
-            sendNativeNotification("Career Mode", "Notificações nativas ativadas com sucesso!");
+            showToast("Notificações Ativadas", "Você receberá avisos em tempo real.");
+            sendNativeNotification("Career Mode", "Notificações ativadas com sucesso!");
           }
           closeModal('modal-notif-permission');
         });
       }
     }
 
-    // Disparo nativo de Notificações estilo WhatsApp
     function sendNativeNotification(title, body) {
       if ('Notification' in window && Notification.permission === 'granted') {
-        try {
-          new Notification(title, {
+        if (swRegistration && swRegistration.showNotification) {
+          swRegistration.showNotification(title, {
             body: body,
-            icon: "Logo CM.svg",
-            badge: "Logo CM.svg",
+            icon: 'Logo CM.svg',
+            badge: 'Logo CM.svg',
             vibrate: [200, 100, 200]
           });
-        } catch (e) {}
+        } else {
+          new Notification(title, { body: body, icon: 'Logo CM.svg' });
+        }
       }
     }
 
@@ -733,15 +740,6 @@
         age--;
       }
       return isNaN(age) ? '' : age;
-    }
-
-    function startCheckinNotificationReminder() {
-      setInterval(() => {
-        const todayStr = new Date().toDateString();
-        if (appData.checkin?.lastCheckinDate !== todayStr) {
-          sendNativeNotification("Career Mode - Check-in Diário", "Faça seu Check-in diário no aplicativo, motive sua renovação!");
-        }
-      }, 1000 * 60 * 120); // A cada 2 horas
     }
 
     function checkDailyReset() {
@@ -859,7 +857,6 @@
       document.getElementById('profile-avatar-file').addEventListener('change', (e) => previewAvatar(e, 'profile'));
     }
 
-    // CHECK-IN DIÁRIO (PONTUAÇÃO AJUSTADA PARA 10 PTS)
     function handleDailyCheckin() {
       const todayStr = new Date().toDateString();
       if (!appData.checkin) appData.checkin = { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 };
@@ -881,7 +878,6 @@
       appData.checkin.lastCheckinDate = todayStr;
       appData.checkin.totalCheckins += 1;
       
-      // Recompensa de 10 pontos
       const rawMonth = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
       const currentMonthStr = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
       let currentMonthRecord = (appData.historyMonths || []).find(m => m.month === currentMonthStr);
@@ -1155,7 +1151,6 @@
       });
     }
 
-    // Escape seguro mantendo suporte nativo total a Emojis UTF-8
     function escapeHtml(text) {
       if (!text) return '';
       const div = document.createElement('div');
