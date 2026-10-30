@@ -58,9 +58,13 @@
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <style>
+    *, *::before, *::after {
+      box-sizing: border-box !important;
+    }
+    
     html, body {
-      height: 100%;
-      width: 100%;
+      height: 100% !important;
+      width: 100% !important;
       overscroll-behavior-y: none;
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
@@ -88,33 +92,32 @@
       transition: background-color 0.15s ease;
     }
     
-    /* TOPO AJUSTADO PARA NÃO COLIDIR COM O RELÓGIO */
+    /* FIXAÇÃO RÍGIDA DO CABEÇALHO PARA IPHONE */
     header {
-      padding-top: max(env(safe-area-inset-top), 12px) !important;
+      padding-top: calc(env(safe-area-inset-top, 20px) + 0.5rem) !important;
+      padding-bottom: 0.75rem !important;
     }
     
-    /* BARRA INFERIOR ESTILO INSTAGRAM (Colada perfeitamente na base) */
-    .safe-bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding-bottom: env(safe-area-inset-bottom, 8px) !important;
-      padding-top: 8px;
-      background-color: rgba(17, 24, 39, 0.95);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      z-index: 40;
+    /* FIXAÇÃO RÍGIDA DA BARRA INFERIOR NA BASE DA TELA */
+    #mobile-nav {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding-top: 8px !important;
+      padding-bottom: max(env(safe-area-inset-bottom, 8px), 8px) !important;
+      background-color: #111827 !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+      z-index: 9999 !important;
     }
 
     #main-content-container {
-      padding-bottom: 5.5rem;
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem) !important;
     }
 
-    /* CORREÇÃO DE INPUTS QUE ESTOURAM A MARGEM */
     input, select, textarea {
-      box-sizing: border-box !important;
       max-width: 100% !important;
     }
   </style>
@@ -230,7 +233,7 @@
   <main class="flex-1 flex flex-col h-full overflow-hidden relative">
     
     <!-- Cabeçalho -->
-    <header class="glass-card border-b border-gray-800 px-6 py-3 flex items-center justify-between z-10 shrink-0">
+    <header class="glass-card border-b border-gray-800 px-6 flex items-center justify-between z-10 shrink-0">
       <div>
         <p class="text-[11px] md:text-sm font-heading font-extrabold uppercase tracking-wider bg-gradient-to-r from-sky-400 via-cyan-300 to-blue-500 bg-clip-text text-transparent" id="current-date-header">CARREGANDO...</p>
         <h2 class="text-lg md:text-2xl font-bold text-white tracking-tight" id="page-title">Início</h2>
@@ -443,8 +446,8 @@
       </footer>
     </div>
 
-    <!-- Navegação Inferior Estilo Instagram (Fixa na base exata) -->
-    <nav class="md:hidden safe-bottom-nav flex justify-around items-center" id="mobile-nav"></nav>
+    <!-- Navegação Inferior Mobile Fixada na Borda -->
+    <nav class="md:hidden flex justify-around items-center" id="mobile-nav"></nav>
   </main>
 
   <!-- MODAL: ONBOARDING / LOGIN -->
@@ -526,7 +529,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ALARME (Com Input Corrigido w-full box-border) -->
+  <!-- MODAL: ALARME -->
   <div id="modal-alarm" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
     <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
       <div class="flex justify-between items-center">
@@ -537,11 +540,11 @@
         <input type="hidden" id="edit-alarm-id">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Título</label>
-          <input type="text" id="alarm-title" required placeholder="Ex: Hora de focar 🎯" class="w-full box-border bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="text" id="alarm-title" required placeholder="Ex: Hora de focar 🎯" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Horário</label>
-          <input type="time" id="alarm-time" required class="w-full box-border bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="time" id="alarm-time" required class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div class="flex justify-end gap-3 pt-2">
           <button type="button" class="close-modal-btn px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:bg-gray-800" data-target="modal-alarm">Cancelar</button>
@@ -562,11 +565,11 @@
         <input type="hidden" id="edit-journal-id">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Título</label>
-          <input type="text" id="journal-title" required placeholder="Ex: Dia produtivo ✨" class="w-full box-border bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="text" id="journal-title" required placeholder="Ex: Dia produtivo ✨" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Conteúdo</label>
-          <textarea id="journal-content" rows="4" required class="w-full box-border bg-gray-900 border border-gray-800 rounded-xl p-3 text-sm text-white resize-none"></textarea>
+          <textarea id="journal-content" rows="4" required class="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-sm text-white resize-none"></textarea>
         </div>
         <div class="flex justify-end gap-3 pt-2">
           <button type="button" class="close-modal-btn px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:bg-gray-800" data-target="modal-journal">Cancelar</button>
@@ -662,7 +665,7 @@
     ];
 
     let appData = {
-      version: '3.8',
+      version: '3.9',
       user: { name: '', email: '', password: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
       tasks: [],
       alarms: [],
@@ -1392,7 +1395,6 @@
     }
 
     function startAlarmChecker() {
-      // Checagem em tempo real otimizada com Page Visibility API para persistência em segundo plano
       setInterval(() => {
         const now = new Date();
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
