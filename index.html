@@ -927,6 +927,10 @@
       const time = document.getElementById('checkin-reminder-time').value || '20:00';
       appData.notifications = { checkinEnabled: enabled, checkinTime: time };
       saveLocalStorageData();
+      if (!supabaseClient || !pushAuthUserId) {
+        showToast('Salvo neste dispositivo', 'Ative as notificações push para programar o envio em segundo plano.');
+        return;
+      }
       try {
         await syncPushSchedules();
         showToast('Lembrete salvo', enabled ? 'Check-in diário às ' + time + '.' : 'Lembrete diário desativado.');
@@ -937,10 +941,8 @@
     }
 
     function checkNotificationPermission() {
-      if ('Notification' in window) {
-        if (Notification.permission === 'default') {
-          openModal('modal-notif-permission');
-        }
+      if (isPushConfigured() && 'Notification' in window && Notification.permission === 'default') {
+        openModal('modal-notif-permission');
       }
     }
 
