@@ -87,12 +87,13 @@
     .task-item {
       transition: background-color 0.15s ease;
     }
+    /* Correção Definitiva do Topo para o iPhone 11 */
     header {
-      padding-top: max(0.75rem, env(safe-area-inset-top));
+      padding-top: calc(env(safe-area-inset-top, 25px) + 0.75rem) !important;
     }
-    /* Alinhamento perfeito na borda inferior cobrindo a barra de gestos do iPhone */
+    /* Alinhamento perfeito da barra inferior */
     .safe-bottom-nav {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.4rem);
       height: 4.2rem;
     }
   </style>
@@ -117,9 +118,9 @@
         <i data-lucide="bell-ring" class="w-8 h-8"></i>
       </div>
       <div class="space-y-3 text-center">
-        <h3 class="text-xl font-extrabold text-white font-heading">Ativar Notificações em Tempo Integral</h3>
+        <h3 class="text-xl font-extrabold text-white font-heading">Ativar Notificações</h3>
         <p class="text-xs text-gray-300 leading-relaxed">
-          Para receber avisos de alarmes e lembretes de Check-in no seu dispositivo mesmo com o aplicativo fechado, ative as notificações.
+          Para receber avisos de alarmes e lembretes de Check-in no seu dispositivo, ative as notificações.
         </p>
       </div>
       <div class="flex gap-3 pt-2">
@@ -207,7 +208,7 @@
   <!-- Área Principal -->
   <main class="flex-1 flex flex-col h-full overflow-hidden relative">
     
-    <!-- Cabeçalho -->
+    <!-- Cabeçalho Ajustado -->
     <header class="glass-card border-b border-gray-800 px-6 py-4 flex items-center justify-between z-10">
       <div>
         <p class="text-xs md:text-sm font-heading font-extrabold uppercase tracking-wider bg-gradient-to-r from-sky-400 via-cyan-300 to-blue-500 bg-clip-text text-transparent" id="current-date-header">CARREGANDO...</p>
@@ -337,7 +338,7 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h3 class="text-xl font-bold text-white">Alarmes e Notificações</h3>
-              <p class="text-sm text-gray-400">Configure horários para receber notificações nativas no dispositivo.</p>
+              <p class="text-sm text-gray-400">Configure horários para receber notificações no dispositivo.</p>
             </div>
             <button id="btn-open-alarm-modal" class="px-4 py-2.5 bg-cyan-500 text-gray-950 font-bold rounded-xl text-sm flex items-center gap-2">
               <i data-lucide="plus" class="w-4 h-4"></i> Novo Alarme
@@ -421,7 +422,7 @@
       </footer>
     </div>
 
-    <!-- Navegação Inferior Mobile Ajustada -->
+    <!-- Navegação Inferior Mobile -->
     <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-card border-t border-gray-800 px-2 pt-2 safe-bottom-nav flex justify-around items-center z-30" id="mobile-nav"></nav>
   </main>
 
@@ -640,7 +641,7 @@
     ];
 
     let appData = {
-      version: '3.5',
+      version: '3.6',
       user: { name: '', email: '', password: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
       tasks: [],
       alarms: [],
