@@ -20,6 +20,7 @@ create table if not exists public.notification_schedules (
   body text not null,
   local_time time not null,
   time_zone text not null default 'America/Sao_Paulo',
+  app_url text not null default '/',
   enabled boolean not null default true,
   last_sent_date date,
   created_at timestamptz not null default now(),
