@@ -63,8 +63,10 @@
     }
     
     html, body {
-      height: 100dvh !important;
-      width: 100vw !important;
+      height: 100% !important;
+      width: 100% !important;
+      position: fixed;
+      overflow: hidden;
       overscroll-behavior-y: none;
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
@@ -72,7 +74,6 @@
       touch-action: manipulation;
       margin: 0;
       padding: 0;
-      overflow: hidden;
       background-color: #090d16;
     }
     body {
@@ -97,7 +98,7 @@
       padding-bottom: 0.5rem !important;
     }
     
-    /* BARRA INFERIOR EXATAMENTE NA BORDA SEM FAIXA PRETA */
+    /* BARRA INFERIOR TRAVADA EXATAMENTE NA BASE */
     #mobile-nav {
       position: fixed !important;
       bottom: 0 !important;
@@ -106,19 +107,21 @@
       width: 100% !important;
       margin: 0 !important;
       padding-top: 6px !important;
-      /* Preenche perfeitamente a área segura inferior aproveitando o espaço nativo */
-      padding-bottom: max(env(safe-area-inset-bottom, 0px), 10px) !important;
+      padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px) !important;
       background-color: #111827 !important;
       border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
       z-index: 9999 !important;
     }
 
     #main-content-container {
-      padding-bottom: 5rem !important;
+      padding-bottom: 5.5rem !important;
     }
 
+    /* CORREÇÃO GLOBAL DE INPUTS E MODAIS */
     input, select, textarea {
+      width: 100% !important;
       max-width: 100% !important;
+      box-sizing: border-box !important;
     }
   </style>
 </head>
@@ -414,21 +417,21 @@
               <form id="form-edit-profile" class="space-y-4">
                 <div>
                   <label class="block text-xs font-semibold text-gray-300 mb-1">E-mail Cadastrado (Bloqueado)</label>
-                  <input type="email" id="profile-email" disabled class="w-full bg-gray-900/60 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-gray-400 cursor-not-allowed">
+                  <input type="email" id="profile-email" disabled class="bg-gray-900/60 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-gray-400 cursor-not-allowed">
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-xs font-semibold text-gray-300 mb-1">Nome de Usuário</label>
-                    <input type="text" id="profile-username" required class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+                    <input type="text" id="profile-username" required class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
                   </div>
                   <div>
                     <label class="block text-xs font-semibold text-gray-300 mb-1">Data de Nascimento</label>
-                    <input type="date" id="profile-user-dob" required class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+                    <input type="date" id="profile-user-dob" required class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
                   </div>
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-gray-300 mb-1">Alterar Foto / Avatar</label>
-                  <input type="file" id="profile-avatar-file" accept="image/*" class="w-full text-xs text-gray-400">
+                  <input type="file" id="profile-avatar-file" accept="image/*" class="text-xs text-gray-400">
                 </div>
                 <button type="submit" class="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold rounded-xl text-sm shadow-lg transition-all">
                   Salvar Alterações
@@ -464,20 +467,20 @@
       <form id="form-onboarding" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-gray-300 mb-1">E-mail da Conta</label>
-          <input type="email" id="onboarding-email" required placeholder="seuemail@exemplo.com" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+          <input type="email" id="onboarding-email" required placeholder="seuemail@exemplo.com" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-300 mb-1">Senha de Acesso</label>
-          <input type="password" id="onboarding-password" required placeholder="••••••••" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+          <input type="password" id="onboarding-password" required placeholder="••••••••" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-1">Nome de Usuário</label>
-            <input type="text" id="onboarding-username" required placeholder="Ex: Raul" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+            <input type="text" id="onboarding-username" required placeholder="Ex: Raul" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-1">Data de Nascimento</label>
-            <input type="date" id="onboarding-dob" required class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+            <input type="date" id="onboarding-dob" required class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
           </div>
         </div>
         <div>
@@ -486,7 +489,7 @@
             <div class="w-14 h-14 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center font-bold text-cyan-400 overflow-hidden text-lg" id="avatar-preview-box">
               U
             </div>
-            <input type="file" id="onboarding-avatar-file" accept="image/*" class="w-full text-xs text-gray-400">
+            <input type="file" id="onboarding-avatar-file" accept="image/*" class="text-xs text-gray-400">
           </div>
         </div>
         <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-sky-400 text-gray-950 font-extrabold rounded-xl text-sm shadow-lg">
@@ -507,11 +510,11 @@
         <input type="hidden" id="edit-task-id">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Título da Tarefa</label>
-          <input type="text" id="task-title" required placeholder="Ex: Ler livro 📖" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="text" id="task-title" required placeholder="Ex: Ler livro 📖" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Categoria (Pontuação Automática Fixa)</label>
-          <select id="task-category" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white">
+          <select id="task-category" class="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white">
             <option value="Atividade Física">Atividade Física (10 pts)</option>
             <option value="Saúde">Saúde (10 pts)</option>
             <option value="Educação Financeira">Educação Financeira (10 pts)</option>
@@ -540,11 +543,11 @@
         <input type="hidden" id="edit-alarm-id">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Título</label>
-          <input type="text" id="alarm-title" required placeholder="Ex: Hora de focar 🎯" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="text" id="alarm-title" required placeholder="Ex: Hora de focar 🎯" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Horário</label>
-          <input type="time" id="alarm-time" required class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="time" id="alarm-time" required class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div class="flex justify-end gap-3 pt-2">
           <button type="button" class="close-modal-btn px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:bg-gray-800" data-target="modal-alarm">Cancelar</button>
@@ -565,11 +568,11 @@
         <input type="hidden" id="edit-journal-id">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Título</label>
-          <input type="text" id="journal-title" required placeholder="Ex: Dia produtivo ✨" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="text" id="journal-title" required placeholder="Ex: Dia produtivo ✨" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Conteúdo</label>
-          <textarea id="journal-content" rows="4" required class="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-sm text-white resize-none"></textarea>
+          <textarea id="journal-content" rows="4" required class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-sm text-white resize-none"></textarea>
         </div>
         <div class="flex justify-end gap-3 pt-2">
           <button type="button" class="close-modal-btn px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:bg-gray-800" data-target="modal-journal">Cancelar</button>
@@ -665,7 +668,7 @@
     ];
 
     let appData = {
-      version: '4.0',
+      version: '4.1',
       user: { name: '', email: '', password: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
       tasks: [],
       alarms: [],
