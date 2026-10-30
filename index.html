@@ -59,6 +59,12 @@
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <style>
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
     html, body {
       height: 100%;
       width: 100%;
@@ -72,10 +78,10 @@
       font-family: 'Inter', sans-serif;
       background-color: #090d16;
       color: #f3f4f6;
-      padding-top: constant(safe-area-inset-top);
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: constant(safe-area-inset-bottom);
-      padding-bottom: env(safe-area-inset-bottom);
+      padding-top: var(--sat);
+      padding-bottom: var(--sab);
+      padding-left: var(--sal);
+      padding-right: var(--sar);
     }
     .font-heading {
       font-family: 'Space Grotesk', sans-serif;
@@ -89,6 +95,9 @@
     .task-item {
       transition: background-color 0.15s ease;
     }
+    .safe-nav-bottom {
+      padding-bottom: max(0.5rem, var(--sab));
+    }
   </style>
 </head>
 <body class="h-full flex flex-col md:flex-row overflow-hidden bg-dark-bg text-gray-100 select-none">
@@ -101,6 +110,26 @@
     <div class="space-y-2">
       <h1 class="text-2xl md:text-3xl font-extrabold text-white font-heading tracking-wide">CM - Career Mode</h1>
       <p class="text-cyan-400 font-medium text-sm md:text-base">Seja bem vindo ao Recomeço.</p>
+    </div>
+  </div>
+
+  <!-- MODAL DE PERMISSÃO DE NOTIFICAÇÃO (PRIMEIRA VEZ) -->
+  <div id="modal-notif-permission" class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[9999] hidden">
+    <div class="glass-card w-full max-w-md p-6 md:p-8 rounded-3xl border-2 border-cyan-500 text-center space-y-6 shadow-2xl">
+      <div class="w-16 h-16 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto">
+        <i data-lucide="bell-ring" class="w-8 h-8"></i>
+      </div>
+      <div class="space-y-3 text-center">
+        <h3 class="text-xl font-extrabold text-white font-heading">Ativar Notificações Nativas</h3>
+        <p class="text-xs text-gray-300 leading-relaxed">
+          Para receber avisos de alarmes e lembretes de Check-in em tempo real como mensagens no seu telefone, ative as permissões de notificação.
+        </p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button id="btn-allow-notifications" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-sky-400 text-gray-950 font-extrabold rounded-xl text-sm shadow-lg shadow-cyan-500/30">
+          Permitir Notificações
+        </button>
+      </div>
     </div>
   </div>
 
@@ -200,7 +229,7 @@
     </header>
 
     <!-- Conteúdo das Abas -->
-    <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 flex flex-col justify-between" id="main-content-container">
+    <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-28 md:pb-8 flex flex-col justify-between" id="main-content-container">
       <div class="space-y-6">
         
         <!-- TAB 1: INÍCIO -->
@@ -214,7 +243,6 @@
                   Patente: Gennin
                 </span>
                 <h3 class="text-2xl md:text-4xl font-extrabold text-white">Central de Comando, <span id="home-user-welcome-name" class="text-cyan-400">Usuário</span>!</h3>
-                <!-- FRASE REVISED AQUI -->
                 <p class="text-sm text-cyan-300/90 font-medium max-w-lg">Seu crescimento começa a partir das pequenas mudanças!</p>
               </div>
 
@@ -231,7 +259,7 @@
             </div>
           </div>
 
-          <!-- WIDGET CHECK-IN DIÁRIO -->
+          <!-- WIDGET CHECK-IN DIÁRIO (PONTUAÇÃO AJUSTADA PARA 10 PTS) -->
           <div class="glass-card p-5 rounded-2xl border border-cyan-500/30 bg-gray-900/50 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
               <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
@@ -239,7 +267,7 @@
               </div>
               <div>
                 <h4 class="text-sm font-bold text-white">Check-in Diário de Hábito</h4>
-                <p class="text-xs text-gray-400">Registre sua presença diária para manter o foco e ganhar +15 pts.</p>
+                <p class="text-xs text-gray-400">Registre sua presença diária para manter o foco e ganhar +10 pts.</p>
                 <p class="text-[11px] text-cyan-400 font-semibold mt-1" id="checkin-streak-count">Sequência atual: 0 dias consecutivas</p>
               </div>
             </div>
@@ -396,8 +424,8 @@
       </footer>
     </div>
 
-    <!-- Navegação Inferior Mobile -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-card border-t border-gray-800 px-2 py-2 flex justify-around items-center z-30" id="mobile-nav"></nav>
+    <!-- Navegação Inferior Mobile Ajustada para Safe Areas -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-card border-t border-gray-800 px-2 py-2 safe-nav-bottom flex justify-around items-center z-30" id="mobile-nav"></nav>
   </main>
 
   <!-- MODAL: ONBOARDING / LOGIN -->
@@ -446,7 +474,7 @@
     </div>
   </div>
 
-  <!-- MODAL: TAREFA -->
+  <!-- MODAL: TAREFA (CRIAR / EDITAR) -->
   <div id="modal-task" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
     <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
       <div class="flex justify-between items-center">
@@ -456,7 +484,7 @@
       <form id="form-custom-task" class="space-y-4">
         <input type="hidden" id="edit-task-id">
         <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Título da Tarefa</label>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Título da Tarefa (Aceita Emojis 🎉)</label>
           <input type="text" id="task-title" required placeholder="Ex: Ler livro 📖" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
@@ -479,7 +507,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ALARME -->
+  <!-- MODAL: ALARME (CRIAR / EDITAR) -->
   <div id="modal-alarm" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
     <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
       <div class="flex justify-between items-center">
@@ -489,8 +517,8 @@
       <form id="form-alarm" class="space-y-4">
         <input type="hidden" id="edit-alarm-id">
         <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Título</label>
-          <input type="text" id="alarm-title" required placeholder="Ex: Hora de focar" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Título (Aceita Emojis ⏰)</label>
+          <input type="text" id="alarm-title" required placeholder="Ex: Hora de focar 🎯" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Horário</label>
@@ -504,7 +532,7 @@
     </div>
   </div>
 
-  <!-- MODAL: DIÁRIO -->
+  <!-- MODAL: DIÁRIO (CRIAR / EDITAR) -->
   <div id="modal-journal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
     <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
       <div class="flex justify-between items-center">
@@ -515,7 +543,7 @@
         <input type="hidden" id="edit-journal-id">
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Título</label>
-          <input type="text" id="journal-title" required placeholder="Ex: Dia produtivo" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+          <input type="text" id="journal-title" required placeholder="Ex: Dia produtivo ✨" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-400 mb-1">Conteúdo</label>
@@ -529,7 +557,7 @@
     </div>
   </div>
 
-  <!-- SCRIPT ENGINE (OTIMIZADO) -->
+  <!-- SCRIPT ENGINE (SUPORTE NATIVO A EMOJIS & EDICÃO) -->
   <script>
     let audioCtx = null;
     function playSound(type) {
@@ -607,7 +635,7 @@
     ];
 
     let appData = {
-      version: '3.2',
+      version: '3.3',
       user: { name: '', email: '', password: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
       tasks: [],
       alarms: [],
@@ -628,7 +656,6 @@
       updateDateDisplays();
       startAlarmChecker();
       initGlobalEventListeners();
-      requestNotificationPermission();
 
       const splash = document.getElementById('splash-screen');
       if (splash) {
@@ -640,11 +667,46 @@
         openOnboardingModal();
       } else {
         document.getElementById('modal-onboarding').classList.add('hidden');
+        checkNotificationPermission();
       }
 
       renderAll();
       startCheckinNotificationReminder();
     });
+
+    function checkNotificationPermission() {
+      if ('Notification' in window) {
+        if (Notification.permission === 'default') {
+          openModal('modal-notif-permission');
+        }
+      }
+    }
+
+    function requestNotificationPermission() {
+      if ('Notification' in window) {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            showToast("Notificações Ativadas", "Você receberá avisos em tempo real no dispositivo.");
+            sendNativeNotification("Career Mode", "Notificações nativas ativadas com sucesso!");
+          }
+          closeModal('modal-notif-permission');
+        });
+      }
+    }
+
+    // Disparo nativo de Notificações estilo WhatsApp
+    function sendNativeNotification(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(title, {
+            body: body,
+            icon: "Logo CM.svg",
+            badge: "Logo CM.svg",
+            vibrate: [200, 100, 200]
+          });
+        } catch (e) {}
+      }
+    }
 
     function loadLocalStorageData() {
       const saved = localStorage.getItem('cm_career_mode_app_data');
@@ -673,21 +735,11 @@
       return isNaN(age) ? '' : age;
     }
 
-    function requestNotificationPermission() {
-      if ('Notification' in window && Notification.permission !== 'granted') {
-        Notification.requestPermission();
-      }
-    }
-
-    // Notificação diária incentivando o Check-in
     function startCheckinNotificationReminder() {
       setInterval(() => {
         const todayStr = new Date().toDateString();
-        if (appData.checkin?.lastCheckinDate !== todayStr && 'Notification' in window && Notification.permission === 'granted') {
-          new Notification("Career Mode - Check-in Diário", {
-            body: "Faça seu Check-in diário no aplicativo, motive sua renovação!",
-            icon: "Logo CM.svg"
-          });
+        if (appData.checkin?.lastCheckinDate !== todayStr) {
+          sendNativeNotification("Career Mode - Check-in Diário", "Faça seu Check-in diário no aplicativo, motive sua renovação!");
         }
       }, 1000 * 60 * 120); // A cada 2 horas
     }
@@ -745,6 +797,7 @@
     }
 
     function initGlobalEventListeners() {
+      document.getElementById('btn-allow-notifications').addEventListener('click', requestNotificationPermission);
       document.getElementById('btn-confirm-yes').addEventListener('click', () => {
         if (pendingDeleteAction) pendingDeleteAction();
         closeConfirmModal();
@@ -806,7 +859,7 @@
       document.getElementById('profile-avatar-file').addEventListener('change', (e) => previewAvatar(e, 'profile'));
     }
 
-    // Função de Check-in Diário
+    // CHECK-IN DIÁRIO (PONTUAÇÃO AJUSTADA PARA 10 PTS)
     function handleDailyCheckin() {
       const todayStr = new Date().toDateString();
       if (!appData.checkin) appData.checkin = { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 };
@@ -828,16 +881,21 @@
       appData.checkin.lastCheckinDate = todayStr;
       appData.checkin.totalCheckins += 1;
       
-      // Bônus de Check-in no histórico
+      // Recompensa de 10 pontos
       const rawMonth = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
       const currentMonthStr = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
       let currentMonthRecord = (appData.historyMonths || []).find(m => m.month === currentMonthStr);
-      if (currentMonthRecord) currentMonthRecord.points += 15;
+      if (currentMonthRecord) {
+        currentMonthRecord.points += 10;
+      } else {
+        if (!appData.historyMonths) appData.historyMonths = [];
+        appData.historyMonths.push({ month: currentMonthStr, points: 10 });
+      }
 
       saveLocalStorageData();
       playSound('success');
       renderAll();
-      showToast("Check-in Realizado!", "+15 pontos acumulados e sequência mantida!");
+      showToast("Check-in Realizado!", "+10 pontos acumulados e sequência mantida!");
     }
 
     function resetAllPointsAndData() {
@@ -913,7 +971,6 @@
       document.getElementById('profile-page-name').innerText = name;
       document.getElementById('profile-username').value = name;
       
-      // E-mail Bloqueado no perfil
       const emailField = document.getElementById('profile-email');
       emailField.value = appData.user?.email || '';
       emailField.disabled = true;
@@ -936,7 +993,6 @@
         profilePageAvatar.innerText = name.charAt(0).toUpperCase();
       }
 
-      // Atualizar status do botão de Check-in
       const btnCheckin = document.getElementById('btn-do-checkin');
       const streakText = document.getElementById('checkin-streak-count');
       const todayStr = new Date().toDateString();
@@ -994,8 +1050,7 @@
       closeModal('modal-onboarding');
       
       setTimeout(() => {
-        document.getElementById('modal-report-consent').classList.remove('hidden');
-        lucide.createIcons();
+        checkNotificationPermission();
       }, 300);
 
       renderAll();
@@ -1100,8 +1155,12 @@
       });
     }
 
+    // Escape seguro mantendo suporte nativo total a Emojis UTF-8
     function escapeHtml(text) {
-      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     function renderTaskManager() {
@@ -1138,10 +1197,15 @@
             <span class="text-xs text-gray-500">${task.category} • ${task.points} pts</span>
           </div>
           <div class="flex items-center gap-2">
+            <button type="button" data-id="${task.id}" class="edit-task-btn p-2 text-gray-400 hover:text-cyan-400"><i data-lucide="pencil" class="w-4 h-4"></i></button>
             <button type="button" data-id="${task.id}" class="delete-task-btn p-2 text-gray-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
           </div>
         </div>
       `).join('');
+
+      document.querySelectorAll('.edit-task-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => openEditTaskModal(e.currentTarget.getAttribute('data-id')));
+      });
 
       document.querySelectorAll('.delete-task-btn').forEach(btn => {
         btn.addEventListener('click', (e) => confirmRemoveTask(e.currentTarget.getAttribute('data-id')));
@@ -1162,6 +1226,16 @@
       }
     }
 
+    function openEditTaskModal(taskId) {
+      const task = appData.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      document.getElementById('edit-task-id').value = task.id;
+      document.getElementById('task-title').value = task.title;
+      document.getElementById('task-category').value = task.category;
+      document.getElementById('task-modal-title').innerText = 'Editar Tarefa';
+      openModal('modal-task');
+    }
+
     function confirmRemoveTask(taskId) {
       showConfirmModal("Deseja realmente excluir esta tarefa?", () => {
         playSound('delete');
@@ -1175,15 +1249,26 @@
     function handleSaveTask(e) {
       e.preventDefault();
       playSound('success');
+      const editId = document.getElementById('edit-task-id').value;
       const title = document.getElementById('task-title').value.trim();
       const category = document.getElementById('task-category').value;
       const points = categoryPointsMap[category] || 5;
 
-      appData.tasks.push({ id: 'task_' + Date.now(), title, category, points, completedToday: false });
+      if (editId) {
+        const task = appData.tasks.find(t => t.id === editId);
+        if (task) {
+          task.title = title;
+          task.category = category;
+          task.points = points;
+        }
+      } else {
+        appData.tasks.push({ id: 'task_' + Date.now(), title, category, points, completedToday: false });
+      }
+
       saveLocalStorageData();
       closeModal('modal-task');
       renderAll();
-      showToast("Sucesso!", "Nova tarefa adicionada.");
+      showToast("Sucesso!", editId ? "Tarefa atualizada." : "Nova tarefa adicionada.");
     }
 
     function renderRankingTab() {
@@ -1229,15 +1314,32 @@
               <span class="text-xs text-gray-500">Notificação programada</span>
             </div>
           </div>
-          <button type="button" data-id="${alm.id}" class="delete-alarm-btn p-2 text-gray-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          <div class="flex items-center gap-2">
+            <button type="button" data-id="${alm.id}" class="edit-alarm-btn p-2 text-gray-400 hover:text-cyan-400"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+            <button type="button" data-id="${alm.id}" class="delete-alarm-btn p-2 text-gray-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
         </div>
       `).join('');
+
+      document.querySelectorAll('.edit-alarm-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => openEditAlarmModal(e.currentTarget.getAttribute('data-id')));
+      });
 
       document.querySelectorAll('.delete-alarm-btn').forEach(btn => {
         btn.addEventListener('click', (e) => confirmRemoveAlarm(e.currentTarget.getAttribute('data-id')));
       });
 
       lucide.createIcons();
+    }
+
+    function openEditAlarmModal(almId) {
+      const alm = appData.alarms.find(a => a.id === almId);
+      if (!alm) return;
+      document.getElementById('edit-alarm-id').value = alm.id;
+      document.getElementById('alarm-title').value = alm.title;
+      document.getElementById('alarm-time').value = alm.time;
+      document.getElementById('alarm-modal-title').innerText = 'Editar Alarme';
+      openModal('modal-alarm');
     }
 
     function confirmRemoveAlarm(almId) {
@@ -1253,14 +1355,24 @@
     function handleSaveAlarm(e) {
       e.preventDefault();
       playSound('success');
+      const editId = document.getElementById('edit-alarm-id').value;
       const title = document.getElementById('alarm-title').value.trim();
       const time = document.getElementById('alarm-time').value;
 
-      appData.alarms.push({ id: 'alm_' + Date.now(), title, time, firedToday: false });
+      if (editId) {
+        const alm = appData.alarms.find(a => a.id === editId);
+        if (alm) {
+          alm.title = title;
+          alm.time = time;
+        }
+      } else {
+        appData.alarms.push({ id: 'alm_' + Date.now(), title, time, firedToday: false });
+      }
+
       saveLocalStorageData();
       closeModal('modal-alarm');
       renderAlarmsTab();
-      showToast("Sucesso!", "Alarme configurado.");
+      showToast("Sucesso!", editId ? "Alarme atualizado." : "Alarme configurado.");
     }
 
     function startAlarmChecker() {
@@ -1272,14 +1384,8 @@
           appData.alarms.forEach(alm => {
             if (alm.time === currentTime && !alm.firedToday) {
               alm.firedToday = true;
-              if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification(`Alarme: ${alm.title}`, {
-                  body: `Horário programado atingido: ${alm.time}`,
-                  icon: "Logo CM.svg"
-                });
-              } else {
-                showToast("Alarme Disparado!", `${alm.title} às ${alm.time}`);
-              }
+              sendNativeNotification(`Alarme: ${alm.title}`, `Horário programado atingido: ${alm.time}`);
+              showToast("Alarme Disparado!", `${alm.title} às ${alm.time}`);
             }
           });
         }
@@ -1295,18 +1401,35 @@
         <div class="glass-card p-4 rounded-2xl border border-gray-800 space-y-2">
           <div class="flex justify-between text-xs text-gray-500">
             <span>${entry.date}</span>
-            <button type="button" data-id="${entry.id}" class="delete-journal-btn p-2 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            <div class="flex items-center gap-1">
+              <button type="button" data-id="${entry.id}" class="edit-journal-btn p-1 text-gray-400 hover:text-cyan-400"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+              <button type="button" data-id="${entry.id}" class="delete-journal-btn p-1 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
           </div>
           <h5 class="text-sm font-bold text-white">${escapeHtml(entry.title)}</h5>
-          <p class="text-xs text-gray-300">${escapeHtml(entry.content)}</p>
+          <p class="text-xs text-gray-300 whitespace-pre-wrap">${escapeHtml(entry.content)}</p>
         </div>
       `).join('');
+
+      document.querySelectorAll('.edit-journal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => openEditJournalModal(e.currentTarget.getAttribute('data-id')));
+      });
 
       document.querySelectorAll('.delete-journal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => confirmRemoveJournal(e.currentTarget.getAttribute('data-id')));
       });
 
       lucide.createIcons();
+    }
+
+    function openEditJournalModal(entryId) {
+      const entry = appData.journal.find(j => j.id === entryId);
+      if (!entry) return;
+      document.getElementById('edit-journal-id').value = entry.id;
+      document.getElementById('journal-title').value = entry.title;
+      document.getElementById('journal-content').value = entry.content;
+      document.getElementById('journal-modal-title').innerText = 'Editar Anotação';
+      openModal('modal-journal');
     }
 
     function confirmRemoveJournal(entryId) {
@@ -1322,14 +1445,24 @@
     function handleSaveJournal(e) {
       e.preventDefault();
       playSound('success');
+      const editId = document.getElementById('edit-journal-id').value;
       const title = document.getElementById('journal-title').value.trim();
       const content = document.getElementById('journal-content').value.trim();
 
-      appData.journal.unshift({ id: 'jnl_' + Date.now(), date: new Date().toLocaleDateString('pt-BR'), title, content });
+      if (editId) {
+        const entry = appData.journal.find(j => j.id === editId);
+        if (entry) {
+          entry.title = title;
+          entry.content = content;
+        }
+      } else {
+        appData.journal.unshift({ id: 'jnl_' + Date.now(), date: new Date().toLocaleDateString('pt-BR'), title, content });
+      }
+
       saveLocalStorageData();
       closeModal('modal-journal');
       renderJournalTab();
-      showToast("Sucesso!", "Anotação salva.");
+      showToast("Sucesso!", editId ? "Anotação atualizada." : "Anotação salva.");
     }
   </script>
 </body>
