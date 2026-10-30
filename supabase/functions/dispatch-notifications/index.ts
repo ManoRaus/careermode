@@ -1,5 +1,5 @@
-import webpush from "npm:web-push@3.6.7";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as webpush from "jsr:@negrel/webpush@0.5.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 function localClock(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -18,11 +18,12 @@ Deno.serve(async (request) => {
   }
 
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  webpush.setVapidDetails(
-    Deno.env.get("VAPID_SUBJECT") || "mailto:admin@careermode.app",
-    Deno.env.get("VAPID_PUBLIC_KEY")!,
-    Deno.env.get("VAPID_PRIVATE_KEY")!
-  );
+  const exportedVapidKeys = JSON.parse(Deno.env.get("VAPID_KEYS_JWK")!);
+  const vapidKeys = await webpush.importVapidKeys(exportedVapidKeys);
+  const appServer = await webpush.ApplicationServer.new({
+    contactInformation: Deno.env.get("VAPID_SUBJECT") || "mailto:admin@careermode.app",
+    vapidKeys,
+  });
 
   const { data: schedules, error } = await admin.from("notification_schedules")
     .select("id,user_id,source_id,title,body,local_time,time_zone,app_url,last_sent_date").eq("enabled", true);
@@ -44,17 +45,29 @@ Deno.serve(async (request) => {
     let delivered = false;
     for (const sub of subscriptions || []) {
       try {
-        await webpush.sendNotification({ endpoint:sub.endpoint, keys:{p256dh:sub.p256dh,auth:sub.auth} },
-          JSON.stringify({ title:schedule.title, body:schedule.body, tag:schedule.source_id, url:schedule.app_url || "/" }));
-        delivered = true; sent++;
+        const subscriber = appServer.subscribe({
+          endpoint: sub.endpoint,
+          keys: { p256dh: sub.p256dh, auth: sub.auth },
+        });
+        await subscriber.pushTextMessage(JSON.stringify({
+          title: schedule.title,
+          body: schedule.body,
+          tag: schedule.source_id,
+          url: schedule.app_url || "/",
+        }), { ttl: 3600, urgency: webpush.Urgency.High });
+        delivered = true;
+        sent++;
       } catch (error) {
-        const status = (error as {statusCode?:number}).statusCode;
-        if (status === 404 || status === 410) await admin.from("push_subscriptions").delete().eq("id", sub.id);
-        else { console.error("Push delivery error", status); failed++; }
+        if (error instanceof webpush.PushMessageError && error.isGone()) {
+          await admin.from("push_subscriptions").delete().eq("id", sub.id);
+        } else {
+          console.error("Push delivery error", error);
+          failed++;
+        }
       }
     }
     if (delivered) await admin.from("notification_schedules")
-      .update({last_sent_date:clock.date,updated_at:new Date().toISOString()}).eq("id",schedule.id);
+      .update({ last_sent_date: clock.date, updated_at: new Date().toISOString() }).eq("id", schedule.id);
   }
-  return Response.json({ok:true,sent,failed});
+  return Response.json({ ok: true, sent, failed });
 });
