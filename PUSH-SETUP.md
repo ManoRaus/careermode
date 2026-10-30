@@ -11,13 +11,13 @@ O sistema usa Web Push padrão, Supabase Auth anônimo e Supabase Cron. O servic
 
 ## 2. Chaves VAPID
 
-Com Node.js instalado, execute:
+Instale o Deno e gere as chaves uma única vez:
 
 ```bash
-npx web-push generate-vapid-keys
+deno run https://raw.githubusercontent.com/negrel/webpush/master/cmd/generate-vapid-keys.ts
 ```
 
-Coloque a chave pública em `vapidPublicKey` no arquivo `supabase-config.js`. A chave privada deve ficar apenas nos secrets do Supabase.
+O comando imprime um JSON com `publicKey` e `privateKey` (JWK), além da application server key em Base64 URL-safe. Coloque essa application server key em `vapidPublicKey` no arquivo `supabase-config.js`. Guarde o JSON JWK completo como secret `VAPID_KEYS_JWK` no Supabase. Não regenere as chaves depois de cadastrar os dispositivos.
 
 ## 3. Publicar a Edge Function
 
@@ -26,10 +26,10 @@ Instale o Supabase CLI, faça login e execute na raiz do projeto:
 ```bash
 supabase link --project-ref SEU_PROJECT_REF
 supabase functions deploy dispatch-notifications
-supabase secrets set VAPID_PUBLIC_KEY=SUA_CHAVE_PUBLICA VAPID_PRIVATE_KEY=SUA_CHAVE_PRIVADA VAPID_SUBJECT=mailto:SEU_EMAIL CRON_SECRET=UM_SEGREDO_LONGO_E_ALEATORIO
+supabase secrets set VAPID_SUBJECT=mailto:SEU_EMAIL CRON_SECRET=UM_SEGREDO_LONGO_E_ALEATORIO
 ```
 
-O Supabase fornece `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` no ambiente da Edge Function. Nunca publique a service-role key ou a chave VAPID privada no GitHub.
+No Dashboard do Supabase → Edge Functions → Secrets, adicione também `VAPID_KEYS_JWK` com o JSON JWK gerado. O Supabase fornece `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` no ambiente da Edge Function. Nunca publique a service-role key, o JSON JWK ou a chave privada no GitHub.
 
 ## 4. Agendamento a cada minuto
 
@@ -55,11 +55,20 @@ select cron.schedule(
 );
 ```
 
-## 5. Ativar no iPhone
+## 5. Configurar o site
+
+Edite `supabase-config.js` com:
+- `url`: Project URL.
+- `anonKey`: chave anon/public.
+- `vapidPublicKey`: application server key impressa pelo gerador VAPID.
+
+Esses três valores são públicos por natureza. Não coloque a service-role key ou a chave privada VAPID no arquivo.
+
+## 6. Ativar no iPhone
 
 1. Atualize o site e abra pelo ícone do Career Mode na Tela de Início.
-2. Toque em **Permitir Notificações** e aceite o pedido do iOS.
-3. Na aba Alarmes, salve seus alarmes e configure o lembrete diário de Check-in.
+2. Na aba Alarmes, toque em **Ativar notificações** e aceite o pedido do iOS.
+3. Configure seus alarmes e o lembrete diário de Check-in.
 4. Confirme em Ajustes → Notificações → Career Mode que os avisos estão permitidos.
 
 No iOS, a solicitação de permissão precisa ocorrer após um toque explícito no app instalado na Tela de Início. O servidor verifica os horários uma vez por minuto, portanto pode haver até cerca de um minuto de variação, além de atrasos de rede e entrega.
@@ -68,6 +77,6 @@ No iOS, a solicitação de permissão precisa ocorrer após um toque explícito 
 
 - Alarmes e lembrete diário são recorrentes todos os dias.
 - A inscrição push é por dispositivo; ative-a em cada aparelho.
-- O app mantém tarefas e alarmes locais; apenas inscrições e horários são sincronizados com o Supabase para envio em segundo plano.
+- O app mantém tarefas e alarmes localmente; inscrições e horários são sincronizados com o Supabase para envio em segundo plano.
 - O lembrete diário começa ativado às 20:00 e pode ser alterado na aba Alarmes.
 - Sem configurar o Supabase, o app continua funcionando localmente; o push em segundo plano permanece desativado.
