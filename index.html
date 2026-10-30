@@ -63,11 +63,13 @@
     }
     
     html, body {
-      height: 100% !important;
       width: 100% !important;
+      height: 100% !important;
+      min-height: 0;
       position: fixed;
+      inset: 0;
       overflow: hidden;
-      overscroll-behavior-y: none;
+      overscroll-behavior: none;
       -webkit-tap-highlight-color: transparent;
       -webkit-touch-callout: none;
       user-select: none;
@@ -75,6 +77,21 @@
       margin: 0;
       padding: 0;
       background-color: #090d16;
+    }
+
+    /* Safari/iOS: acompanha a altura real da tela no modo Web App */
+    @supports (height: 100dvh) {
+      html, body {
+        height: 100dvh !important;
+      }
+    }
+
+    body {
+      min-height: 0;
+    }
+
+    main {
+      min-height: 0;
     }
     body {
       font-family: 'Inter', sans-serif;
@@ -98,30 +115,71 @@
       padding-bottom: 0.5rem !important;
     }
     
-    /* BARRA INFERIOR TRAVADA EXATAMENTE NA BASE */
+    /* Navegação mobile: a cor de fundo também ocupa a área do indicador do iPhone */
     #mobile-nav {
       position: fixed !important;
-      bottom: 0 !important;
       left: 0 !important;
       right: 0 !important;
+      bottom: 0 !important;
       width: 100% !important;
+      min-width: 0 !important;
+      min-height: 64px;
       margin: 0 !important;
-      padding-top: 6px !important;
-      padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px) !important;
+      padding: 6px 4px calc(env(safe-area-inset-bottom, 0px) + 6px) !important;
+      box-sizing: border-box !important;
       background-color: #111827 !important;
       border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
       z-index: 9999 !important;
     }
 
-    #main-content-container {
-      padding-bottom: 5.5rem !important;
+    #mobile-nav .nav-btn-mobile {
+      min-width: 0;
+      flex: 1 1 0;
     }
 
-    /* CORREÇÃO GLOBAL DE INPUTS E MODAIS */
+    #main-content-container {
+      min-height: 0;
+      padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Inputs não podem ultrapassar a largura interna dos cards/modais */
     input, select, textarea {
+      display: block;
       width: 100% !important;
+      min-width: 0 !important;
       max-width: 100% !important;
       box-sizing: border-box !important;
+    }
+
+    /* Mantém o seletor nativo de horário, mas impede seu tamanho intrínseco
+       de alargar o formulário no Safari/iOS. */
+    #form-alarm,
+    #form-alarm > div,
+    #modal-alarm .glass-card {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    #alarm-time {
+      display: block;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      inline-size: 100%;
+      min-inline-size: 0;
+      box-sizing: border-box !important;
+      font-size: 16px;
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
+    @media (max-width: 767px) {
+      #mobile-nav {
+        /* A barra fica colada à borda inferior; o safe area recebe o mesmo fundo. */
+        bottom: 0 !important;
+      }
     }
   </style>
 </head>
