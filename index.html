@@ -895,6 +895,7 @@
         body: 'Seu alarme está programado para agora.',
         local_time: alarm.time,
         time_zone: timeZone,
+        app_url: window.location.origin + window.location.pathname,
         enabled: true
       }));
       const reminder = appData.notifications || { checkinEnabled: true, checkinTime: '20:00' };
@@ -905,6 +906,7 @@
         body: 'Reserve um momento para registrar seu progresso de hoje no Career Mode.',
         local_time: reminder.checkinTime || '20:00',
         time_zone: timeZone,
+        app_url: window.location.origin + window.location.pathname,
         enabled: reminder.checkinEnabled !== false
       });
       const { error } = await supabaseClient.from('notification_schedules').upsert(
@@ -1019,6 +1021,7 @@
         }
 
         if (appData.tasks) appData.tasks.forEach(t => t.completedToday = false);
+        if (appData.alarms) appData.alarms.forEach(alarm => alarm.firedToday = false);
         appData.lastActiveDate = todayStr;
         saveLocalStorageData();
       }
@@ -1670,7 +1673,10 @@
           appData.alarms.forEach(alm => {
             if (alm.time === currentTime && !alm.firedToday) {
               alm.firedToday = true;
-              sendNativeNotification(`Alarme: ${alm.title}`, `Horário programado atingido: ${alm.time}`);
+              if (!pushAuthUserId) {
+                sendNativeNotification(`Alarme: ${alm.title}`, `Horário programado atingido: ${alm.time}`);
+              }
+              saveLocalStorageData();
               showToast("Alarme Disparado!", `${alm.title} às ${alm.time}`);
             }
           });
