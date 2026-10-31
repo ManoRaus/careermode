@@ -1458,7 +1458,7 @@
         if (!config?.url || !config?.anonKey || !window.supabase?.createClient) {
           throw new Error('Supabase não configurado.');
         }
-        if (!supabaseClient) supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+        if (!supabaseClient) supabaseClient = window.supabase.createClient(config.url, config.anonKey, { auth: { storageKey: 'cm-preview-auth-token' } });
         accountService = window.CareerModeAccountService.makeService(supabaseClient);
       }
       return accountService;
@@ -1498,8 +1498,19 @@
             appData = { ...appData, ...result.state };
             cloud = { state: result.state, revision: result.revision };
           } else {
-            status.textContent = 'Conta criada. Para sincronizar, importe os dados deste aparelho ou inicie um perfil novo.';
-            return;
+            if (!window.confirm('Criar um perfil novo e vazio para esta conta de testes?')) {
+              status.textContent = 'Nenhum dado foi importado.';
+              return;
+            }
+            const blank = {
+              ...appData,
+              tasks: [], alarms: [], journal: [], historyMonths: [],
+              checkin: { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 },
+              user: { name: user.user_metadata?.name || '', email: user.email, onboarded: true, weeklyReport: true }
+            };
+            const result = await service.saveState(blank, 0);
+            appData = { ...blank };
+            cloud = { state: result.state, revision: result.revision };
           }
         }
         appData.user = {
