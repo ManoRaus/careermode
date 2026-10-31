@@ -830,6 +830,61 @@
     let supabaseClient = null;
     let pushAuthUserId = null;
     let accountService = null;
+    let syncRevision = null;
+    let syncOwner = null;
+    let syncTimer = null;
+    let syncBusy = false;
+    let syncPending = false;
+    let syncUnsubscribe = null;
+
+    function startAccountSync(user, cloud) {
+      if (syncUnsubscribe) syncUnsubscribe();
+      syncOwner = user.id;
+      syncRevision = cloud.revision;
+      syncPending = false;
+      const service = getAccountService();
+      syncUnsubscribe = service.subscribe(async error => {
+        if (error || syncPending || syncBusy || syncOwner !== user.id) return;
+        try {
+          const latest = await service.readState();
+          if (latest.state && latest.revision > syncRevision && !syncPending && !syncBusy) {
+            appData = { ...appData, ...latest.state };
+            syncRevision = latest.revision;
+            renderAll();
+          }
+        } catch (err) { console.warn('Falha ao receber atualização remota', err); }
+      });
+    }
+
+    function queueAccountSync() {
+      if (!syncOwner || syncRevision === null) return;
+      syncPending = true;
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(flushAccountSync, 450);
+    }
+
+    async function flushAccountSync() {
+      if (!syncPending || syncBusy || !syncOwner) return;
+      syncBusy = true;
+      syncPending = false;
+      const owner = syncOwner;
+      const snapshot = JSON.parse(JSON.stringify(appData));
+      try {
+        const result = await getAccountService().saveState(snapshot, syncRevision);
+        if (syncOwner !== owner) return;
+        syncRevision = result.revision;
+      } catch (error) {
+        console.error('Sincronização interrompida', error);
+        syncPending = true;
+        showToast('Sincronização pendente', 'Os dados continuam neste aparelho. Evite editar em outro dispositivo até resolver o conflito.');
+      } finally {
+        syncBusy = false;
+        if (syncPending && syncOwner === owner && !syncTimer) {
+          // Never retry revision conflicts automatically: remote data may have changed.
+        }
+      }
+    }
+
     let authMode = 'login';
 
     function isPushConfigured() {
@@ -1042,6 +1097,7 @@
     function saveLocalStorageData() {
       if (appData.user) delete appData.user.password;
       localStorage.setItem('cm_career_mode_app_data', JSON.stringify(appData));
+      queueAccountSync();
     }
 
     function calculateAge(dobString) {
@@ -1359,6 +1415,7 @@
           name: appData.user?.name || user.user_metadata?.name || '', onboarded: true };
         delete appData.user.password;
         pushAuthUserId = user.id;
+        startAccountSync(user, cloud);
         document.getElementById('modal-onboarding').classList.add('hidden');
         renderAll();
       } catch (error) {
