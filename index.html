@@ -563,7 +563,7 @@
   </main>
 
   <!-- MODAL: ONBOARDING / LOGIN -->
-  <div id="modal-onboarding" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
+  <div id="modal-onboarding" class="fixed inset-0 bg-black/90 flex items-start md:items-center justify-center p-4 z-50 overflow-y-auto">
     <div class="glass-card w-full max-w-lg p-6 md:p-8 rounded-3xl border border-cyan-500/30 space-y-6 shadow-2xl">
       <div class="text-center space-y-2">
         <div class="w-16 h-16 rounded-2xl bg-[#090d16] border border-cyan-500/30 flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/30 p-2">
@@ -591,7 +591,7 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-1">Data de Nascimento</label>
-            <input type="date" id="onboarding-dob" required class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+            <input type="date" id="onboarding-dob" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
           </div>
         </div>
         <div>
@@ -1441,7 +1441,7 @@
         authMode = mode;
         details.classList.toggle('hidden', mode !== 'register');
         document.getElementById('onboarding-username').required = mode === 'register';
-        document.getElementById('onboarding-dob').required = mode === 'register';
+        document.getElementById('onboarding-dob').required = false;
         submit.textContent = mode === 'register' ? 'Criar minha conta' : 'Entrar na minha conta';
         loginButton.classList.toggle('bg-cyan-500', mode === 'login');
         registerButton.classList.toggle('bg-cyan-500', mode === 'register');
@@ -1450,6 +1450,12 @@
       }
       loginButton.addEventListener('click', () => setMode('login'));
       registerButton.addEventListener('click', () => setMode('register'));
+      document.getElementById('form-onboarding').addEventListener('invalid', event => {
+        const field = event.target;
+        const labels = { 'onboarding-email': 'e-mail válido', 'onboarding-password': 'senha', 'onboarding-username': 'nome de usuário', 'onboarding-dob': 'data de nascimento' };
+        document.getElementById('auth-status').textContent = 'Verifique o campo: ' + (labels[field.id] || 'obrigatório') + '.';
+        field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, true);
       document.getElementById('auth-reset-password').addEventListener('click', async () => {
         const email = document.getElementById('onboarding-email').value.trim();
         const status = document.getElementById('auth-status');
@@ -1487,9 +1493,10 @@
         if (authMode === 'register') {
           const name = document.getElementById('onboarding-username').value.trim();
           if (!name || password.length < 6) throw new Error('Informe o nome e uma senha de pelo menos 6 caracteres.');
+          status.textContent = 'Criando conta...';
           const result = await service.register(email, password, { name });
           if (!result.session) {
-            status.textContent = 'Verifique seu e-mail para confirmar a conta antes de entrar.';
+            status.textContent = 'Cadastro recebido! Verifique seu e-mail (inclusive spam) para confirmar a conta antes de entrar.';
             return;
           }
         } else {
