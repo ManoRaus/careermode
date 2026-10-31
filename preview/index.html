@@ -1,0 +1,1960 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <title>CM - Ambiente de Testes</title>
+
+  <!-- Preview: no installable manifest -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Career Mode">
+  <meta name="theme-color" content="#090d16">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="../logo-512.png">
+  <link rel="icon" type="image/svg+xml" href="../Logo CM.svg">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase-config.js"></script>
+  <script src="auth-sync.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              400: '#38bdf8',
+              500: '#06b6d4',
+              600: '#0284c7',
+              700: '#0369a1',
+            },
+            dark: {
+              bg: '#090d16',
+              card: '#111827',
+              border: '#1f2937',
+              hover: '#1f2937'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Space Grotesk', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box !important;
+    }
+    
+    html, body {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+      touch-action: manipulation;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* O html fornece a cor da área que o WebKit pode reservar no modo standalone. */
+    html {
+      background-color: #111827 !important;
+    }
+
+    body {
+      height: 100vh !important;
+      min-height: 100vh !important;
+      background-color: #090d16 !important;
+    }
+
+    /* Safari em aba usa a altura dinâmica; no app instalado, 100vh evita
+       o recorte inferior associado ao viewport-fit=cover no WebKit. */
+    @supports (height: 100dvh) {
+      html, body {
+        height: 100dvh !important;
+      }
+    }
+
+    @media (display-mode: standalone) {
+      html, body {
+        height: 100vh !important;
+      }
+      html {
+        background-color: #111827 !important;
+      }
+    }
+
+    main {
+      min-height: 0;
+      background-color: #090d16;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      color: #f3f4f6;
+    }
+    .font-heading {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .task-item {
+      transition: background-color 0.15s ease;
+    }
+    
+    header {
+      padding-top: calc(env(safe-area-inset-top, 16px) + 0.25rem) !important;
+      padding-bottom: 0.5rem !important;
+    }
+    
+    /* Navegação mobile: a cor de fundo também ocupa a área do indicador do iPhone */
+    #mobile-nav {
+      position: fixed !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 64px;
+      margin: 0 !important;
+      padding: 6px 4px calc(env(safe-area-inset-bottom, 0px) + 6px) !important;
+      box-sizing: border-box !important;
+      background-color: #111827 !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+      z-index: 9999 !important;
+    }
+
+    #mobile-nav .nav-btn-mobile {
+      min-width: 0;
+      flex: 1 1 0;
+    }
+
+    #main-content-container {
+      min-height: 0;
+      padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Inputs não podem ultrapassar a largura interna dos cards/modais */
+    input, select, textarea {
+      display: block;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    /* Mantém o seletor nativo de horário, mas impede seu tamanho intrínseco
+       de alargar o formulário no Safari/iOS. */
+    #form-alarm,
+    #form-alarm > div,
+    #modal-alarm .glass-card {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    /* WebKit/iOS 26 calcula incorretamente a largura de inputs date/time
+       com padding. O recuo visual é feito por text-indent, sem padding. */
+    input[type="time"],
+    input[type="date"] {
+      padding: 0 !important;
+      text-indent: 12px;
+      height: 42px;
+      line-height: 42px;
+    }
+
+    #alarm-time {
+      display: block;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      inline-size: 100%;
+      min-inline-size: 0;
+      box-sizing: border-box !important;
+      font-size: 16px;
+    }
+
+    @media (max-width: 767px) {
+      #mobile-nav {
+        /* A barra fica colada à borda inferior; o safe area recebe o mesmo fundo. */
+        bottom: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col md:flex-row bg-dark-bg text-gray-100 select-none">
+<div style="position:fixed;bottom:0;left:0;right:0;background:#7c2d12;color:white;text-align:center;padding:5px;z-index:999;font:12px sans-serif;pointer-events:none">AMBIENTE DE TESTES — não configure notificações aqui</div>
+
+  <!-- SPLASH SCREEN -->
+  <div id="splash-screen" class="fixed inset-0 bg-[#090d16] z-50 flex flex-col items-center justify-center p-6 text-center space-y-6 transition-opacity duration-300">
+    <div class="w-24 h-24 rounded-3xl bg-[#090d16] border border-cyan-500/30 flex items-center justify-center shadow-2xl shadow-cyan-500/40 p-3">
+      <img src="../Logo CM.svg" alt="Logo CM" class="w-full h-full object-contain">
+    </div>
+    <div class="space-y-2">
+      <h1 class="text-2xl md:text-3xl font-extrabold text-white font-heading tracking-wide">CM - Career Mode</h1>
+      <p class="text-cyan-400 font-medium text-sm md:text-base">Seja bem vindo ao Recomeço.</p>
+    </div>
+  </div>
+
+  <!-- MODAL DE PERMISSÃO DE NOTIFICAÇÃO -->
+  <div id="modal-notif-permission" class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[9999] hidden">
+    <div class="glass-card w-full max-w-md p-6 md:p-8 rounded-3xl border-2 border-cyan-500 text-center space-y-6 shadow-2xl">
+      <div class="w-16 h-16 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto">
+        <i data-lucide="bell-ring" class="w-8 h-8"></i>
+      </div>
+      <div class="space-y-3 text-center">
+        <h3 class="text-xl font-extrabold text-white font-heading">Ativar Notificações</h3>
+        <p class="text-xs text-gray-300 leading-relaxed">
+          Ative as notificações para receber alarmes e lembretes de Check-in mesmo quando o Career Mode estiver fechado.
+        </p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button id="btn-allow-notifications" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-sky-400 text-gray-950 font-extrabold rounded-xl text-sm shadow-lg shadow-cyan-500/30">
+          Permitir Notificações
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE RELATÓRIO SEMANAL -->
+  <div id="modal-report-consent" class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[999] hidden">
+    <div class="glass-card w-full max-w-md p-6 md:p-8 rounded-3xl border-2 border-cyan-500 text-center space-y-6 shadow-2xl">
+      <div class="w-16 h-16 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto">
+        <i data-lucide="mail" class="w-8 h-8"></i>
+      </div>
+      <div class="space-y-3 text-left">
+        <h3 class="text-xl font-extrabold text-white font-heading text-center">Relatório Semanal por E-mail</h3>
+        <p class="text-xs text-gray-300 leading-relaxed">
+          Gostaria de receber um relatório semanal no seu e-mail cadastrado detalhando seu progresso?
+        </p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button id="btn-refuse-report" class="flex-1 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold rounded-xl text-xs">Não Quero</button>
+        <button id="btn-accept-report" class="flex-1 py-3 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold rounded-xl text-xs shadow-lg shadow-cyan-500/30">Quero Receber</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast-notification" class="fixed top-0 left-0 right-0 z-[100] translate-y-[-200%] opacity-0 glass-card w-full max-w-none px-5 py-4 border-b border-cyan-500/40 bg-gray-900/95 shadow-2xl flex items-center justify-center gap-3 transition-all duration-300 pointer-events-none" style="padding-top: max(1rem, env(safe-area-inset-top))">
+    <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+      <i data-lucide="check" class="w-4 h-4"></i>
+    </div>
+    <div>
+      <p class="text-xs font-bold text-white" id="toast-title">Sucesso!</p>
+      <p class="text-[11px] text-gray-400" id="toast-desc">Ação realizada com êxito.</p>
+    </div>
+  </div>
+
+  <!-- MODAL DE EXCLUSÃO -->
+  <div id="modal-confirm" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
+    <div class="glass-card w-full max-w-sm p-6 rounded-3xl border border-red-500/30 text-center space-y-4">
+      <div class="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <div class="space-y-1">
+        <h3 class="text-lg font-bold text-white">Confirmar Exclusão</h3>
+        <p class="text-xs text-gray-400" id="confirm-msg">Tem certeza?</p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button id="btn-confirm-no" class="flex-1 py-2.5 rounded-xl text-xs font-semibold text-gray-300 bg-gray-800">Cancelar</button>
+        <button id="btn-confirm-yes" class="flex-1 py-2.5 rounded-xl text-xs font-bold text-gray-950 bg-red-500">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Desktop -->
+  <aside class="hidden md:flex flex-col w-64 glass-card border-r border-gray-800 p-5 justify-between h-full z-20">
+    <div>
+      <div class="flex items-center gap-3 mb-8 px-2 cursor-pointer" id="sidebar-profile-btn">
+        <div class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center font-bold text-cyan-400 overflow-hidden shadow-lg shadow-cyan-500/20" id="sidebar-user-avatar">
+          U
+        </div>
+        <div>
+          <h1 class="font-bold text-sm leading-tight tracking-wide text-white truncate max-w-[120px]" id="user-name-display">Usuário</h1>
+          <div class="flex items-center gap-1.5 text-[11px] text-cyan-400 font-medium" id="sidebar-rank-tag">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            Gennin
+          </div>
+        </div>
+      </div>
+
+      <nav class="space-y-2" id="desktop-nav"></nav>
+    </div>
+
+    <div class="space-y-2">
+      <button id="btn-reset-day" class="w-full py-2 px-3 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all border border-red-500/20 flex items-center justify-center gap-2">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+        Zerar Dados do Dia
+      </button>
+    </div>
+  </aside>
+
+  <!-- Área Principal -->
+  <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+    
+    <!-- Cabeçalho -->
+    <header class="glass-card border-b border-gray-800 px-6 flex items-center justify-between z-10 shrink-0">
+      <div>
+        <p class="text-[11px] md:text-sm font-heading font-extrabold uppercase tracking-wider bg-gradient-to-r from-sky-400 via-cyan-300 to-blue-500 bg-clip-text text-transparent" id="current-date-header">CARREGANDO...</p>
+        <h2 class="text-lg md:text-2xl font-bold text-white tracking-tight" id="page-title">Início</h2>
+      </div>
+
+      <div class="flex items-center gap-2 md:gap-4">
+        <div class="glass-card px-3 py-1.5 md:px-4 md:py-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 flex items-center gap-2">
+          <i data-lucide="award" class="w-4 h-4 md:w-5 md:h-5 text-amber-400"></i>
+          <div class="text-left">
+            <p class="text-[9px] text-gray-400 uppercase font-semibold leading-none">Hoje</p>
+            <p class="text-xs md:text-base font-extrabold text-cyan-400 leading-tight" id="header-today-pts">0 pts</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Conteúdo das Abas -->
+    <div class="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col justify-between" id="main-content-container">
+      <div class="space-y-6">
+        
+        <!-- TAB 1: INÍCIO -->
+        <section id="tab-home" class="tab-content space-y-6">
+          <div class="glass-card p-6 md:p-8 rounded-3xl border-2 border-cyan-500/40 bg-gradient-to-r from-sky-950/40 via-gray-900/60 to-gray-900/90 relative overflow-hidden shadow-xl shadow-cyan-500/10">
+            <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+              <div class="space-y-2">
+                <span class="px-3 py-1 text-xs font-semibold rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 inline-block" id="home-rank-badge">
+                  Patente: Gennin
+                </span>
+                <h3 class="text-2xl md:text-4xl font-extrabold text-white">Central de Comando, <span id="home-user-welcome-name" class="text-cyan-400">Usuário</span>!</h3>
+                <p class="text-sm text-cyan-300/90 font-medium max-w-lg">Seu crescimento começa a partir das pequenas mudanças!</p>
+              </div>
+
+              <div class="glass-card p-4 rounded-2xl border border-gray-800 min-w-[240px] space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-gray-400">Progresso da Patente</span>
+                  <span class="font-bold text-cyan-400" id="rank-progress-text">0 / 100 pts</span>
+                </div>
+                <div class="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-cyan-500 to-sky-400 rounded-full transition-all duration-300" id="rank-progress-bar" style="width: 0%"></div>
+                </div>
+                <p class="text-[11px] text-gray-500 text-right" id="next-rank-desc">Próxima: Chunnin</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- WIDGET CHECK-IN DIÁRIO -->
+          <div class="glass-card p-5 rounded-2xl border border-cyan-500/30 bg-gray-900/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+                <i data-lucide="calendar-check-2" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <h4 class="text-sm font-bold text-white">Check-in Diário de Hábito</h4>
+                <p class="text-xs text-gray-400">Registre sua presença diária para manter o foco e ganhar +10 pts.</p>
+                <p class="text-[11px] text-cyan-400 font-semibold mt-1" id="checkin-streak-count">Sequência atual: 0 dias consecutivos</p>
+              </div>
+            </div>
+            <button id="btn-do-checkin" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-gray-950 font-extrabold rounded-xl text-xs shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4"></i> Realizar Check-in Hoje
+            </button>
+          </div>
+
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h4 class="text-lg font-bold text-white flex items-center gap-2">
+                <i data-lucide="check-square" class="w-5 h-5 text-cyan-400"></i>
+                Tarefas de Hoje
+              </h4>
+              <span class="text-xs text-gray-400" id="completed-count-text">0/0 concluídas</span>
+            </div>
+            <div class="space-y-3" id="home-tasks-container"></div>
+          </div>
+        </section>
+
+        <!-- TAB 2: TAREFAS -->
+        <section id="tab-tasks" class="tab-content hidden space-y-6">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h3 class="text-xl font-bold text-white">Gerenciador de Objetivos</h3>
+              <p class="text-sm text-gray-400">Adicione tarefas. Os pontos são fixos conforme a categoria escolhida.</p>
+            </div>
+            <button id="btn-open-task-modal" class="px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-cyan-500/20">
+              <i data-lucide="plus" class="w-4 h-4"></i> Criar Tarefa Personalizada
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Catálogo de Tarefas</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="template-tasks-grid"></div>
+          </div>
+
+          <div class="space-y-3 pt-4 border-t border-gray-800">
+            <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Sua Lista Ativa</h4>
+            <div class="space-y-3" id="manage-tasks-container"></div>
+          </div>
+        </section>
+
+        <!-- TAB 3: RANKING -->
+        <section id="tab-ranking" class="tab-content hidden space-y-8">
+          <div>
+            <h3 class="text-xl font-bold text-white">Ranking Local Mensal</h3>
+            <p class="text-sm text-gray-400">Hierarquia de patentes e sua posição atual destacada.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass-card p-5 rounded-2xl border border-gray-800 space-y-4">
+              <h4 class="font-bold text-white flex items-center gap-2">
+                <i data-lucide="calendar" class="w-5 h-5 text-cyan-400"></i> Histórico Mensal
+              </h4>
+              <div class="space-y-2" id="monthly-history-list"></div>
+            </div>
+
+            <div class="glass-card p-5 rounded-2xl border border-gray-800 space-y-4">
+              <h4 class="font-bold text-white flex items-center gap-2">
+                <i data-lucide="shield" class="w-5 h-5 text-amber-400"></i> Hierarquia de Patentes
+              </h4>
+              <div class="space-y-3" id="ranks-hierarchy-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: ALARMES -->
+        <section id="tab-alarms" class="tab-content hidden space-y-6">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h3 class="text-xl font-bold text-white">Alarmes e Notificações</h3>
+              <p class="text-sm text-gray-400">Configure horários para receber notificações no dispositivo.</p>
+            </div>
+            <button id="btn-open-alarm-modal" class="px-4 py-2.5 bg-cyan-500 text-gray-950 font-bold rounded-xl text-sm flex items-center gap-2">
+              <i data-lucide="plus" class="w-4 h-4"></i> Novo Alarme
+            </button>
+          </div>
+          <div class="glass-card p-5 rounded-2xl border border-cyan-500/25 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h4 class="font-bold text-white">Notificações do dispositivo</h4>
+                <p class="text-xs text-gray-400 mt-1">Ative ou reative o envio de avisos em segundo plano neste aparelho.</p>
+              </div>
+              <button type="button" id="btn-enable-push" class="px-4 py-2.5 bg-cyan-500 text-gray-950 rounded-xl text-xs font-extrabold">Ativar notificações</button>
+            </div>
+            <div>
+              <h4 class="font-bold text-white">Lembrete de Check-in Diário</h4>
+              <p class="text-xs text-gray-400 mt-1">Receba um lembrete mesmo quando o Career Mode estiver fechado.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+              <label class="flex items-center gap-2 text-sm text-gray-300">
+                <input id="checkin-reminder-enabled" type="checkbox" class="!w-4 !h-4 accent-cyan-500">
+                Ativar lembrete diário
+              </label>
+              <div class="flex items-center gap-2 sm:ml-auto">
+                <label for="checkin-reminder-time" class="text-xs text-gray-400">Horário</label>
+                <input id="checkin-reminder-time" type="time" value="20:00" class="!w-32 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white">
+                <button type="button" id="btn-save-checkin-reminder" class="px-3 py-2 bg-cyan-500 text-gray-950 rounded-lg text-xs font-bold">Salvar</button>
+              </div>
+            </div>
+            <p class="text-[11px] text-gray-500">Horário padrão: 20:00. Você pode alterá-lo quando quiser.</p>
+          </div>
+          <div class="space-y-3" id="alarms-list-container"></div>
+        </section>
+
+        <!-- TAB 5: DIÁRIO -->
+        <section id="tab-journal" class="tab-content hidden space-y-6">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h3 class="text-xl font-bold text-white">Diário de Evolução</h3>
+              <p class="text-sm text-gray-400">Registre notas e momentos do seu dia.</p>
+            </div>
+            <button id="btn-open-journal-modal" class="px-4 py-2.5 bg-cyan-500 text-gray-950 font-bold rounded-xl text-sm flex items-center gap-2">
+              <i data-lucide="book-open" class="w-4 h-4"></i> Nova Anotação
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="journal-entries-grid"></div>
+        </section>
+
+        <!-- TAB 6: PERFIL -->
+        <section id="tab-profile" class="tab-content hidden space-y-6">
+          <div>
+            <h3 class="text-xl font-bold text-white">Meu Perfil</h3>
+            <p class="text-sm text-gray-400">Gerencie dados, foto e preferências.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass-card p-6 rounded-3xl border border-gray-800 text-center space-y-4">
+              <div class="w-24 h-24 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center font-bold text-cyan-400 overflow-hidden text-2xl mx-auto" id="profile-page-avatar">
+                U
+              </div>
+              <div>
+                <h4 class="text-lg font-bold text-white" id="profile-page-name">Usuário</h4>
+                <p class="text-xs text-cyan-400 font-medium mt-0.5" id="profile-page-rank">Gennin</p>
+              </div>
+              <div class="pt-2 border-t border-gray-800 text-left space-y-2 text-xs">
+                <div class="flex justify-between"><span class="text-gray-400">Pontos Totais:</span> <span class="font-bold text-white" id="profile-total-pts">0 pts</span></div>
+                <div class="flex justify-between"><span class="text-gray-400">Idade:</span> <span class="font-bold text-white" id="profile-age">-- anos</span></div>
+              </div>
+            </div>
+
+            <div class="glass-card p-6 rounded-3xl border border-gray-800 md:col-span-2 space-y-4">
+              <h4 class="font-bold text-white flex items-center gap-2">
+                <i data-lucide="user-cog" class="w-5 h-5 text-cyan-400"></i> Editar Dados de Perfil
+              </h4>
+              <form id="form-edit-profile" class="space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1">E-mail Cadastrado (Bloqueado)</label>
+                  <input type="email" id="profile-email" disabled class="bg-gray-900/60 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-gray-400 cursor-not-allowed">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Nome de Usuário</label>
+                    <input type="text" id="profile-username" required class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Data de Nascimento</label>
+                    <input type="date" id="profile-user-dob" required class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-300 mb-1">Alterar Foto / Avatar</label>
+                  <input type="file" id="profile-avatar-file" accept="image/*" class="text-xs text-gray-400">
+                </div>
+                <button type="submit" class="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold rounded-xl text-sm shadow-lg transition-all">
+                  Salvar Alterações
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Rodapé -->
+      <footer class="pt-8 pb-4 text-center border-t border-gray-800/60 mt-6">
+        <p class="text-xs text-gray-500 font-medium">© 2026 Raul Barreto. Todos os direitos reservados.</p>
+      </footer>
+    </div>
+
+    <!-- Navegação Inferior Mobile Perfeitamente Fixada -->
+    <nav class="md:hidden flex justify-around items-center" id="mobile-nav"></nav>
+  </main>
+
+  <!-- MODAL: ONBOARDING / LOGIN -->
+  <div id="modal-onboarding" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
+    <div class="glass-card w-full max-w-lg p-6 md:p-8 rounded-3xl border border-cyan-500/30 space-y-6 shadow-2xl">
+      <div class="text-center space-y-2">
+        <div class="w-16 h-16 rounded-2xl bg-[#090d16] border border-cyan-500/30 flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/30 p-2">
+          <img src="../Logo CM.svg" alt="Logo CM" class="w-full h-full object-contain">
+        </div>
+        <h3 class="text-2xl font-extrabold text-white font-heading">Login & Cadastramento - Career Mode</h3>
+        <p class="text-xs md:text-sm text-gray-400">Insira seu e-mail e senha cadastrados para acessar o Web App.</p>
+      </div>
+
+      <div class="flex gap-2 text-xs"><button type="button" id="auth-mode-login" class="flex-1 rounded-lg bg-cyan-500 text-gray-950 p-2 font-bold">Entrar</button><button type="button" id="auth-mode-register" class="flex-1 rounded-lg bg-gray-800 text-white p-2 font-bold">Criar conta</button></div>
+      <form id="form-onboarding" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">E-mail da Conta</label>
+          <input type="email" id="onboarding-email" required placeholder="seuemail@exemplo.com" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Senha de Acesso</label>
+          <input type="password" id="onboarding-password" required placeholder="••••••••" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+        </div>
+        <div id="auth-register-details" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1">Nome de Usuário</label>
+            <input type="text" id="onboarding-username" required placeholder="Digite seu nome" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-1">Data de Nascimento</label>
+            <input type="date" id="onboarding-dob" required class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-2">Foto / Avatar de Perfil</label>
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center font-bold text-cyan-400 overflow-hidden text-lg" id="avatar-preview-box">
+              U
+            </div>
+            <input type="file" id="onboarding-avatar-file" accept="image/*" class="text-xs text-gray-400">
+          </div>
+        </div>
+        </div>
+        <button type="submit" id="auth-submit" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-sky-400 text-gray-950 font-extrabold rounded-xl text-sm shadow-lg">
+          Entrar no Aplicativo
+        </button>
+      </form>
+      <button type="button" id="auth-reset-password" class="text-xs text-cyan-300 underline">Esqueci minha senha</button>
+      <p id="auth-status" role="status" class="text-xs text-gray-300"></p>
+    </div>
+  </div>
+
+  <!-- MODAL: TAREFA -->
+  <div id="modal-task" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
+    <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white" id="task-modal-title">Nova Tarefa</h3>
+        <button type="button" class="close-modal-btn text-gray-400 hover:text-white" data-target="modal-task"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="form-custom-task" class="space-y-4">
+        <input type="hidden" id="edit-task-id">
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Título da Tarefa</label>
+          <input type="text" id="task-title" required placeholder="Ex: Ler livro 📖" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Categoria</label>
+          <select id="task-category" class="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white">
+            <option value="Atividade Física">Atividade Física (10 pts)</option>
+            <option value="Saúde">Saúde (10 pts)</option>
+            <option value="Educação Financeira">Educação Financeira (10 pts)</option>
+            <option value="Atividade Intelectual">Atividade Intelectual (5 pts)</option>
+            <option value="Rotina Alimentar">Rotina Alimentar (5 pts)</option>
+            <option value="Crescimento Pessoal">Crescimento Pessoal (5 pts)</option>
+            <option value="Lazer">Lazer (3 pts)</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" class="close-modal-btn px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:bg-gray-800" data-target="modal-task">Cancelar</button>
+          <button type="submit" class="px-5 py-2 bg-cyan-500 text-gray-950 font-bold rounded-xl text-sm">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ALARME -->
+  <div id="modal-alarm" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
+    <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white" id="alarm-modal-title">Novo Alarme</h3>
+        <button type="button" class="close-modal-btn text-gray-400 hover:text-white" data-target="modal-alarm"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="form-alarm" class="space-y-4">
+        <input type="hidden" id="edit-alarm-id">
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Título</label>
+          <input type="text" id="alarm-title" required placeholder="Ex: Hora de focar 🎯" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Horário</label>
+          <input type="time" id="alarm-time" required class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" class="close-modal-btn px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:bg-gray-800" data-target="modal-alarm">Cancelar</button>
+          <button type="submit" class="px-5 py-2 bg-cyan-500 text-gray-950 font-bold rounded-xl text-sm">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DIÁRIO -->
+  <div id="modal-journal" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
+    <div class="glass-card w-full max-w-md p-6 rounded-3xl border border-gray-800 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white" id="journal-modal-title">Nova Anotação</h3>
+        <button type="button" class="close-modal-btn text-gray-400 hover:text-white" data-target="modal-journal"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="form-journal" class="space-y-4">
+        <input type="hidden" id="edit-journal-id">
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Título</label>
+          <input type="text" id="journal-title" required placeholder="Ex: Dia produtivo ✨" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Conteúdo</label>
+          <textarea id="journal-content" rows="4" required class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-sm text-white resize-none"></textarea>
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" class="close-modal-btn px-4 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:bg-gray-800" data-target="modal-journal">Cancelar</button>
+          <button type="submit" class="px-5 py-2 bg-cyan-500 text-gray-950 font-bold rounded-xl text-sm">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPT ENGINE -->
+  <script>
+    let swRegistration = null;
+
+    if ('serviceWorker' in navigator) {
+      // Preview does not register or replace the production service worker.
+    }
+
+    let audioCtx = null;
+    function playSound(type) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        if (type === 'success') {
+          [523.25, 659.25, 783.99].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(freq, now + i * 0.05);
+            gain.gain.setValueAtTime(0.06, now + i * 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3 + i * 0.05);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(now + i * 0.05); osc.stop(now + 0.35 + i * 0.05);
+          });
+        } else if (type === 'delete') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+          gain.gain.setValueAtTime(0.08, now);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now); osc.stop(now + 0.18);
+        } else if (type === 'click') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.frequency.setValueAtTime(400, now);
+          gain.gain.setValueAtTime(0.03, now);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now); osc.stop(now + 0.03);
+        }
+      } catch (e) {}
+    }
+
+    const categoryPointsMap = {
+      'Atividade Física': 10,
+      'Saúde': 10,
+      'Educação Financeira': 10,
+      'Atividade Intelectual': 5,
+      'Rotina Alimentar': 5,
+      'Crescimento Pessoal': 5,
+      'Lazer': 3
+    };
+
+    const navItems = [
+      { id: 'home', label: 'Início', icon: 'home' },
+      { id: 'tasks', label: 'Tarefas', icon: 'check-square' },
+      { id: 'ranking', label: 'Ranking', icon: 'trophy' },
+      { id: 'alarms', label: 'Alarmes', icon: 'bell' },
+      { id: 'journal', label: 'Diário', icon: 'book-open' },
+      { id: 'profile', label: 'Perfil', icon: 'user' }
+    ];
+
+    const ranks = [
+      { name: 'Gennin', minPts: 0, maxPts: 100 },
+      { name: 'Chunnin', minPts: 101, maxPts: 300 },
+      { name: 'Jounnin', minPts: 301, maxPts: 600 },
+      { name: 'Anbu', minPts: 601, maxPts: 1000 },
+      { name: 'Akatsuki', minPts: 1001, maxPts: 1500 },
+      { name: 'Sannin', minPts: 1501, maxPts: 2200 },
+      { name: 'Jinchuuriki', minPts: 2201, maxPts: 3000 },
+      { name: 'Kage', minPts: 3001, maxPts: Infinity }
+    ];
+
+    const templateTasks = [
+      { id: 'tpl_1', title: 'Realizar atividade física (30 min) ⚡', category: 'Atividade Física' },
+      { id: 'tpl_2', title: 'Beber 2.5L de água 💧', category: 'Saúde' },
+      { id: 'tpl_3', title: 'Guardar parte do rendimento 💰', category: 'Educação Financeira' },
+      { id: 'tpl_4', title: 'Ler 10 páginas de um livro 📖', category: 'Atividade Intelectual' },
+      { id: 'tpl_5', title: 'Alimentação saudável e balanceada 🥗', category: 'Rotina Alimentar' },
+      { id: 'tpl_6', title: 'Estudar uma nova habilidade 🚀', category: 'Crescimento Pessoal' },
+      { id: 'tpl_7', title: 'Momento de descanso e lazer 🎮', category: 'Lazer' }
+    ];
+
+    let appData = {
+      version: '4.1',
+      user: { name: '', email: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
+      tasks: [],
+      alarms: [],
+      journal: [],
+      checkin: { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 },
+      notifications: { checkinEnabled: true, checkinTime: '20:00' },
+      historyMonths: [],
+      lastActiveDate: new Date().toDateString()
+    };
+
+    let activeTab = 'home';
+    let tempAvatarBase64 = null;
+    let pendingDeleteAction = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadLocalStorageData();
+      checkDailyReset();
+      // Push disabled in preview: production notifications are not modified.
+      renderNavigation();
+      updateDateDisplays();
+      startAlarmChecker();
+      initGlobalEventListeners();
+      initAccountControls();
+      window.addEventListener('storage', event => {
+        if (event.key !== 'cm_preview_app_data' || !event.newValue) return;
+        try {
+          const next = JSON.parse(event.newValue);
+          if (!Array.isArray(next.tasks)) return;
+          appData = { ...appData, ...next };
+          renderAll();
+        } catch (error) { console.warn('Falha ao atualizar outra aba', error); }
+      });
+
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => splash.remove(), 300);
+      }
+
+      openOnboardingModal();
+      renderAll();
+      restoreAccountSession();
+    });
+
+    let supabaseClient = null;
+    let pushAuthUserId = null;
+    let accountService = null;
+    let syncRevision = null;
+    let syncOwner = null;
+    let syncTimer = null;
+    let syncBusy = false;
+    let syncPending = false;
+    let syncUnsubscribe = null;
+
+    function startAccountSync(user, cloud) {
+      if (syncUnsubscribe) syncUnsubscribe();
+      syncOwner = user.id;
+      syncRevision = cloud.revision;
+      syncPending = false;
+      const service = getAccountService();
+      syncUnsubscribe = service.subscribe(async error => {
+        if (error || syncPending || syncBusy || syncOwner !== user.id) return;
+        try {
+          const latest = await service.readState();
+          if (latest.state && latest.revision > syncRevision && !syncPending && !syncBusy) {
+            appData = { ...appData, ...latest.state };
+            syncRevision = latest.revision;
+            renderAll();
+          }
+        } catch (err) { console.warn('Falha ao receber atualização remota', err); }
+      });
+    }
+
+    function queueAccountSync() {
+      if (!syncOwner || syncRevision === null) return;
+      syncPending = true;
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(flushAccountSync, 450);
+    }
+
+    async function flushAccountSync() {
+      syncTimer = null;
+      if (!syncPending || syncBusy || !syncOwner) return;
+      syncBusy = true;
+      syncPending = false;
+      const owner = syncOwner;
+      const snapshot = JSON.parse(JSON.stringify(appData));
+      try {
+        const result = await getAccountService().saveState(snapshot, syncRevision);
+        if (syncOwner !== owner) return;
+        syncRevision = result.revision;
+      } catch (error) {
+        console.error('Sincronização interrompida', error);
+        syncPending = true;
+        showToast('Sincronização pendente', 'Os dados continuam neste aparelho. Evite editar em outro dispositivo até resolver o conflito.');
+      } finally {
+        syncBusy = false;
+        // A revision conflict requires manual reconciliation, never blind retries.
+      }
+    }
+
+    let authMode = 'login';
+
+    function isPushConfigured() {
+      const config = window.CAREER_MODE_SUPABASE;
+      return !!(config && config.url && config.anonKey && config.vapidPublicKey &&
+        !config.url.includes('YOUR_PROJECT') && !config.anonKey.includes('YOUR_') &&
+        !config.vapidPublicKey.includes('YOUR_'));
+    }
+
+    function getLocalTimeZone() {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo';
+    }
+
+    async function initializePushBackend() {
+      if (!isPushConfigured() || !window.supabase?.createClient) return;
+      try {
+        const config = window.CAREER_MODE_SUPABASE;
+        supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session?.user) {
+          pushAuthUserId = session.user.id;
+          await syncPushSchedules();
+        }
+      } catch (error) {
+        console.warn('Push do Career Mode ainda não configurado:', error);
+      }
+    }
+
+    function base64UrlToUint8Array(base64Url) {
+      const padding = '='.repeat((4 - base64Url.length % 4) % 4);
+      const raw = atob((base64Url + padding).replace(/-/g, '+').replace(/_/g, '/'));
+      return Uint8Array.from([...raw].map(character => character.charCodeAt(0)));
+    }
+
+    async function subscribeToPushNotifications() {
+      if (!isPushConfigured()) {
+        showToast('Configuração pendente', 'O backend de notificações ainda precisa ser conectado.');
+        return false;
+      }
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        showToast('Recurso indisponível', 'Este navegador não oferece suporte a notificações push.');
+        return false;
+      }
+      const config = window.CAREER_MODE_SUPABASE;
+      if (!supabaseClient) supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+
+      let { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) {
+        const signIn = await supabaseClient.auth.signInAnonymously();
+        if (signIn.error) throw signIn.error;
+        session = signIn.data.session;
+      }
+      pushAuthUserId = session.user.id;
+
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: base64UrlToUint8Array(config.vapidPublicKey)
+        });
+      }
+      const json = subscription.toJSON();
+      const { error } = await supabaseClient.from('push_subscriptions').upsert({
+        user_id: pushAuthUserId,
+        endpoint: json.endpoint,
+        p256dh: json.keys.p256dh,
+        auth: json.keys.auth,
+        expiration_time: json.expirationTime ? new Date(json.expirationTime).toISOString() : null
+      }, { onConflict: 'endpoint' });
+      if (error) throw error;
+      await syncPushSchedules();
+      return true;
+    }
+
+    async function syncPushSchedules() {
+      if (!supabaseClient || !pushAuthUserId) return;
+      const timeZone = getLocalTimeZone();
+      const schedules = (appData.alarms || []).map(alarm => ({
+        user_id: pushAuthUserId,
+        source_id: 'alarm:' + alarm.id,
+        title: 'Career Mode • ' + normalizeTaskTitle(alarm.title),
+        body: 'Seu alarme está programado para agora.',
+        local_time: alarm.time,
+        time_zone: timeZone,
+        app_url: window.location.origin + window.location.pathname,
+        enabled: true
+      }));
+      const reminder = appData.notifications || { checkinEnabled: true, checkinTime: '20:00' };
+      schedules.push({
+        user_id: pushAuthUserId,
+        source_id: 'checkin-daily',
+        title: 'Hora do seu Check-in! 🎯',
+        body: 'Reserve um momento para registrar seu progresso de hoje no Career Mode.',
+        local_time: reminder.checkinTime || '20:00',
+        time_zone: timeZone,
+        app_url: window.location.origin + window.location.pathname,
+        enabled: reminder.checkinEnabled !== false
+      });
+      const { error } = await supabaseClient.from('notification_schedules').upsert(
+        schedules, { onConflict: 'user_id,source_id' }
+      );
+      if (error) throw error;
+    }
+
+    async function saveCheckinReminderSettings() {
+      const enabled = document.getElementById('checkin-reminder-enabled').checked;
+      const time = document.getElementById('checkin-reminder-time').value || '20:00';
+      appData.notifications = { checkinEnabled: enabled, checkinTime: time };
+      saveLocalStorageData();
+      if (!supabaseClient || !pushAuthUserId) {
+        showToast('Salvo neste dispositivo', 'Ative as notificações push para programar o envio em segundo plano.');
+        return;
+      }
+      try {
+        await syncPushSchedules();
+        showToast('Lembrete salvo', enabled ? 'Check-in diário às ' + time + '.' : 'Lembrete diário desativado.');
+      } catch (error) {
+        console.error('Erro ao sincronizar lembrete:', error);
+        showToast('Salvo neste dispositivo', 'Conecte as notificações push para sincronizar o lembrete.');
+      }
+    }
+
+    function checkNotificationPermission() {
+      if (isPushConfigured() && 'Notification' in window && Notification.permission === 'default') {
+        openModal('modal-notif-permission');
+      }
+    }
+
+    async function requestNotificationPermission() {
+      if (!isPushConfigured()) {
+        showToast('Configuração pendente', 'O serviço de notificações ainda precisa ser conectado ao Supabase.');
+        return;
+      }
+      if (!('Notification' in window)) {
+        showToast('Recurso indisponível', 'Este navegador não oferece suporte a notificações.');
+        return;
+      }
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          const subscribed = await subscribeToPushNotifications();
+          if (subscribed) {
+            showToast('Notificações ativadas', 'O Career Mode poderá enviar lembretes em segundo plano.');
+            sendNativeNotification('Career Mode', 'Notificações ativadas com sucesso!');
+          }
+        } else {
+          showToast('Permissão não concedida', 'Ative as notificações nas configurações do dispositivo.');
+        }
+      } catch (error) {
+        console.error('Falha ao ativar notificações:', error);
+        showToast('Não foi possível ativar', 'Verifique a configuração de notificações e tente novamente.');
+      } finally {
+        closeModal('modal-notif-permission');
+      }
+    }
+
+    function sendNativeNotification(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        if (swRegistration && swRegistration.showNotification) {
+          swRegistration.showNotification(title, {
+            body: body,
+            icon: 'Logo CM.svg',
+            badge: 'Logo CM.svg',
+            data: { url: window.location.origin + window.location.pathname },
+            vibrate: [200, 100, 200]
+          });
+        } else {
+          new Notification(title, { body: body, icon: 'Logo CM.svg' });
+        }
+      }
+    }
+
+    function loadLocalStorageData() {
+      const saved = localStorage.getItem('cm_preview_app_data');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.user) delete parsed.user.password;
+          delete parsed.password;
+          appData = { ...appData, ...parsed };
+          if (!appData.checkin) appData.checkin = { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 };
+          if (!appData.notifications) appData.notifications = { checkinEnabled: true, checkinTime: '20:00' };
+        } catch (e) {}
+      }
+    }
+
+    function newTaskId() {
+      return 'task_' + (window.crypto?.randomUUID?.() || Date.now() + '_' + Math.random().toString(36).slice(2));
+    }
+
+    function commitTaskChange(mutator) {
+      const previous = JSON.stringify(appData.tasks || []);
+      try {
+        if (!Array.isArray(appData.tasks)) appData.tasks = [];
+        const result = mutator(appData.tasks);
+        if (result === false) return false;
+        saveLocalStorageData();
+        renderAll();
+        return true;
+      } catch (error) {
+        appData.tasks = JSON.parse(previous);
+        console.error('Falha ao salvar tarefa', error);
+        renderAll();
+        showToast('Não foi possível salvar', 'Verifique o armazenamento do aparelho.');
+        return false;
+      }
+    }
+
+    function saveLocalStorageData() {
+      if (appData.user) delete appData.user.password;
+      localStorage.setItem('cm_preview_app_data', JSON.stringify(appData));
+      queueAccountSync();
+    }
+
+    function calculateAge(dobString) {
+      if (!dobString) return '';
+      const today = new Date();
+      const dob = new Date(dobString);
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+        age--;
+      }
+      return isNaN(age) ? '' : age;
+    }
+
+    function checkDailyReset() {
+      const todayStr = new Date().toDateString();
+      const rawMonth = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+      const currentMonthStr = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
+
+      if (appData.lastActiveDate !== todayStr) {
+        const todayPts = (appData.tasks || []).filter(t => t.completedToday).reduce((acc, t) => acc + Number(t.points), 0);
+        if (!appData.historyMonths) appData.historyMonths = [];
+        let currentMonthRecord = appData.historyMonths.find(m => m.month === currentMonthStr);
+        if (!currentMonthRecord) {
+          appData.historyMonths.push({ month: currentMonthStr, points: todayPts });
+        } else {
+          currentMonthRecord.points += todayPts;
+        }
+
+        if (appData.tasks) appData.tasks.forEach(t => t.completedToday = false);
+        if (appData.alarms) appData.alarms.forEach(alarm => alarm.firedToday = false);
+        appData.lastActiveDate = todayStr;
+        saveLocalStorageData();
+      }
+    }
+
+    let toastHideTimer = null;
+    function showToast(title, desc) {
+      const toast = document.getElementById('toast-notification');
+      document.getElementById('toast-title').innerText = title;
+      document.getElementById('toast-desc').innerText = desc;
+      if (toastHideTimer) clearTimeout(toastHideTimer);
+      toast.classList.remove('translate-y-[-200%]', 'opacity-0');
+      toastHideTimer = setTimeout(() => toast.classList.add('translate-y-[-200%]', 'opacity-0'), 2500);
+    }
+
+    function showConfirmModal(message, callback) {
+      playSound('click');
+      document.getElementById('confirm-msg').innerText = message;
+      document.getElementById('modal-confirm').classList.remove('hidden');
+      pendingDeleteAction = callback;
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('modal-confirm').classList.add('hidden');
+      pendingDeleteAction = null;
+    }
+
+    function closeModal(id) {
+      playSound('click');
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function openModal(id) {
+      playSound('click');
+      document.getElementById(id).classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function initGlobalEventListeners() {
+      document.getElementById('btn-allow-notifications').addEventListener('click', requestNotificationPermission);
+      document.getElementById('btn-enable-push').addEventListener('click', requestNotificationPermission);
+      document.getElementById('btn-save-checkin-reminder').addEventListener('click', saveCheckinReminderSettings);
+      document.getElementById('btn-confirm-yes').addEventListener('click', () => {
+        if (pendingDeleteAction) pendingDeleteAction();
+        closeConfirmModal();
+      });
+      document.getElementById('btn-confirm-no').addEventListener('click', closeConfirmModal);
+
+      document.getElementById('sidebar-profile-btn').addEventListener('click', () => switchTab('profile'));
+      document.getElementById('btn-reset-day').addEventListener('click', resetAllPointsAndData);
+      document.getElementById('btn-do-checkin').addEventListener('click', handleDailyCheckin);
+
+      document.getElementById('btn-accept-report').addEventListener('click', () => {
+        playSound('success');
+        appData.user.weeklyReport = true;
+        saveLocalStorageData();
+        document.getElementById('modal-report-consent').classList.add('hidden');
+        showToast("Preferência Salva", "Relatório semanal ativado.");
+      });
+
+      document.getElementById('btn-refuse-report').addEventListener('click', () => {
+        playSound('click');
+        appData.user.weeklyReport = false;
+        saveLocalStorageData();
+        document.getElementById('modal-report-consent').classList.add('hidden');
+        showToast("Preferência Salva", "Relatório desativado.");
+      });
+
+      document.getElementById('btn-open-task-modal').addEventListener('click', () => {
+        document.getElementById('edit-task-id').value = '';
+        document.getElementById('task-modal-title').innerText = 'Nova Tarefa';
+        document.getElementById('form-custom-task').reset();
+        openModal('modal-task');
+      });
+
+      document.getElementById('btn-open-alarm-modal').addEventListener('click', () => {
+        document.getElementById('edit-alarm-id').value = '';
+        document.getElementById('alarm-modal-title').innerText = 'Novo Alarme';
+        document.getElementById('form-alarm').reset();
+        openModal('modal-alarm');
+      });
+
+      document.getElementById('btn-open-journal-modal').addEventListener('click', () => {
+        document.getElementById('edit-journal-id').value = '';
+        document.getElementById('journal-modal-title').innerText = 'Nova Anotação';
+        document.getElementById('form-journal').reset();
+        openModal('modal-journal');
+      });
+
+      document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => closeModal(e.currentTarget.getAttribute('data-target')));
+      });
+
+      document.getElementById('form-onboarding').addEventListener('submit', handleOnboardingSubmit);
+      document.getElementById('form-edit-profile').addEventListener('submit', handleEditProfileSubmit);
+      document.getElementById('form-custom-task').addEventListener('submit', handleSaveTask);
+      document.getElementById('form-alarm').addEventListener('submit', handleSaveAlarm);
+      document.getElementById('form-journal').addEventListener('submit', handleSaveJournal);
+      
+      document.getElementById('onboarding-avatar-file').addEventListener('change', (e) => previewAvatar(e, 'onboarding'));
+      document.getElementById('profile-avatar-file').addEventListener('change', (e) => previewAvatar(e, 'profile'));
+    }
+
+    function handleDailyCheckin() {
+      const todayStr = new Date().toDateString();
+      if (!appData.checkin) appData.checkin = { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 };
+
+      if (appData.checkin.lastCheckinDate === todayStr) {
+        showToast("Check-in Concluído", "Você já realizou seu Check-in de hoje!");
+        return;
+      }
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      if (appData.checkin.lastCheckinDate === yesterday.toDateString()) {
+        appData.checkin.streakDays += 1;
+      } else {
+        appData.checkin.streakDays = 1;
+      }
+
+      appData.checkin.lastCheckinDate = todayStr;
+      appData.checkin.totalCheckins += 1;
+      
+      const rawMonth = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+      const currentMonthStr = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
+      let currentMonthRecord = (appData.historyMonths || []).find(m => m.month === currentMonthStr);
+      if (currentMonthRecord) {
+        currentMonthRecord.points += 10;
+      } else {
+        if (!appData.historyMonths) appData.historyMonths = [];
+        appData.historyMonths.push({ month: currentMonthStr, points: 10 });
+      }
+
+      saveLocalStorageData();
+      playSound('success');
+      renderAll();
+      showToast("Check-in Realizado!", "+10 pontos acumulados e sequência mantida!");
+    }
+
+    function resetAllPointsAndData() {
+      showConfirmModal("Deseja zerar o progresso do dia atual?", () => {
+        playSound('delete');
+        if (appData.tasks) appData.tasks.forEach(t => t.completedToday = false);
+        saveLocalStorageData();
+        renderAll();
+        showToast("Progresso Reiniciado", "As tarefas de hoje foram limpas.");
+      });
+    }
+
+    function renderNavigation() {
+      document.getElementById('desktop-nav').innerHTML = navItems.map(item => `
+        <button type="button" data-tab="${item.id}" class="nav-btn-desktop w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all ${activeTab === item.id ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800/50'}">
+          <i data-lucide="${item.icon}" class="w-5 h-5"></i>
+          ${item.label}
+        </button>
+      `).join('');
+
+      document.getElementById('mobile-nav').innerHTML = navItems.map(item => `
+        <button type="button" data-tab="${item.id}" class="nav-btn-mobile flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-medium transition-all ${activeTab === item.id ? 'text-cyan-400 font-bold' : 'text-gray-500'}">
+          <i data-lucide="${item.icon}" class="w-5 h-5 mb-0.5"></i>
+          ${item.label}
+        </button>
+      `).join('');
+
+      document.querySelectorAll('.nav-btn-desktop, .nav-btn-mobile').forEach(btn => {
+        btn.addEventListener('click', (e) => switchTab(e.currentTarget.getAttribute('data-tab')));
+      });
+
+      lucide.createIcons();
+    }
+
+    function switchTab(tabId) {
+      playSound('click');
+      activeTab = tabId;
+      renderNavigation();
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      
+      const titles = { home: 'Início', tasks: 'Gerenciador de Tarefas', ranking: 'Ranking Mensal', alarms: 'Alarmes', journal: 'Diário', profile: 'Meu Perfil' };
+      document.getElementById('page-title').innerText = titles[tabId];
+      renderAll();
+    }
+
+    function calculateStats() {
+      const todayPts = (appData.tasks || []).filter(t => t.completedToday).reduce((sum, t) => sum + Number(t.points), 0);
+      const pastMonthsPts = (appData.historyMonths || []).reduce((sum, m) => sum + Number(m.points), 0);
+      const totalPts = pastMonthsPts + todayPts;
+
+      let currentRank = ranks[0], nextRank = ranks[1];
+      for (let i = 0; i < ranks.length; i++) {
+        if (totalPts >= ranks[i].minPts) {
+          currentRank = ranks[i];
+          nextRank = ranks[i + 1] || null;
+        }
+      }
+      return { todayPts, totalPts, currentRank, nextRank };
+    }
+
+    function updateDateDisplays() {
+      const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+      document.getElementById('current-date-header').innerText = new Date().toLocaleDateString('pt-BR', options).toUpperCase();
+    }
+
+    function renderUserProfile() {
+      const name = appData.user?.name || 'Usuário';
+      const age = calculateAge(appData.user?.dob);
+
+      document.getElementById('user-name-display').innerText = name;
+      document.getElementById('home-user-welcome-name').innerText = name;
+      document.getElementById('profile-page-name').innerText = name;
+      document.getElementById('profile-username').value = name;
+      
+      const emailField = document.getElementById('profile-email');
+      emailField.value = appData.user?.email || '';
+      emailField.disabled = true;
+
+      document.getElementById('profile-user-dob').value = appData.user?.dob || '';
+      document.getElementById('profile-age').innerText = age !== '' ? `${age} anos` : 'Não informada';
+
+      const stats = calculateStats();
+      document.getElementById('profile-total-pts').innerText = `${stats.totalPts} pts`;
+      document.getElementById('profile-page-rank').innerText = stats.currentRank.name;
+
+      const avatarBox = document.getElementById('sidebar-user-avatar');
+      const profilePageAvatar = document.getElementById('profile-page-avatar');
+      
+      if (appData.user?.avatar) {
+        avatarBox.innerHTML = `<img src="${appData.user.avatar}" class="w-full h-full object-cover">`;
+        profilePageAvatar.innerHTML = `<img src="${appData.user.avatar}" class="w-full h-full object-cover">`;
+      } else {
+        avatarBox.innerText = name.charAt(0).toUpperCase();
+        profilePageAvatar.innerText = name.charAt(0).toUpperCase();
+      }
+
+      const btnCheckin = document.getElementById('btn-do-checkin');
+      const streakText = document.getElementById('checkin-streak-count');
+      const todayStr = new Date().toDateString();
+      const streak = appData.checkin?.streakDays || 0;
+
+      streakText.innerText = `Sequência atual: ${streak} ${streak === 1 ? 'dia consecutivo' : 'dias consecutivos'}`;
+
+      if (appData.checkin?.lastCheckinDate === todayStr) {
+        btnCheckin.innerText = "Check-in Feito Hoje";
+        btnCheckin.classList.remove('from-cyan-500', 'to-sky-500', 'hover:from-cyan-400');
+        btnCheckin.classList.add('bg-gray-800', 'text-gray-400', 'cursor-not-allowed');
+      } else {
+        btnCheckin.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4"></i> Realizar Check-in Hoje`;
+        btnCheckin.classList.add('from-cyan-500', 'to-sky-500');
+        btnCheckin.classList.remove('bg-gray-800', 'text-gray-400', 'cursor-not-allowed');
+      }
+    }
+
+    function openOnboardingModal() {
+      if (appData.user?.name) {
+        document.getElementById('onboarding-username').value = appData.user.name;
+        document.getElementById('onboarding-email').value = appData.user.email || '';
+        document.getElementById('onboarding-dob').value = appData.user.dob || '';
+      }
+      openModal('modal-onboarding');
+    }
+
+    function previewAvatar(e, type) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = evt => {
+          tempAvatarBase64 = evt.target.result;
+          if (type === 'onboarding') {
+            document.getElementById('avatar-preview-box').innerHTML = `<img src="${tempAvatarBase64}" class="w-full h-full object-cover">`;
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    async function restoreAccountSession() {
+      try {
+        const service = getAccountService();
+        const user = await service.requireUser();
+        const cloud = await service.readState();
+        if (!cloud.state) return; // Do not silently upload legacy local data.
+        appData = { ...appData, ...cloud.state };
+        appData.user = { ...appData.user, email: user.email,
+          name: appData.user?.name || user.user_metadata?.name || '', onboarded: true };
+        delete appData.user.password;
+        pushAuthUserId = user.id;
+        startAccountSync(user, cloud);
+        document.getElementById('modal-onboarding').classList.add('hidden');
+        renderAll();
+      } catch (error) {
+        document.getElementById('modal-onboarding').classList.remove('hidden');
+      }
+    }
+
+    function initAccountControls() {
+      const loginButton = document.getElementById('auth-mode-login');
+      const registerButton = document.getElementById('auth-mode-register');
+      const details = document.getElementById('auth-register-details');
+      const submit = document.getElementById('auth-submit');
+      function setMode(mode) {
+        authMode = mode;
+        details.classList.toggle('hidden', mode !== 'register');
+        document.getElementById('onboarding-username').required = mode === 'register';
+        document.getElementById('onboarding-dob').required = mode === 'register';
+        submit.textContent = mode === 'register' ? 'Criar minha conta' : 'Entrar na minha conta';
+        loginButton.classList.toggle('bg-cyan-500', mode === 'login');
+        registerButton.classList.toggle('bg-cyan-500', mode === 'register');
+        document.getElementById('auth-reset-password').classList.toggle('hidden', mode === 'register');
+        document.getElementById('auth-status').textContent = '';
+      }
+      loginButton.addEventListener('click', () => setMode('login'));
+      registerButton.addEventListener('click', () => setMode('register'));
+      document.getElementById('auth-reset-password').addEventListener('click', async () => {
+        const email = document.getElementById('onboarding-email').value.trim();
+        const status = document.getElementById('auth-status');
+        if (!email) { status.textContent = 'Informe seu e-mail primeiro.'; return; }
+        try {
+          await getAccountService().resetPassword(email, window.location.origin + window.location.pathname);
+          status.textContent = 'Se o endereço estiver cadastrado, você receberá instruções por e-mail.';
+        } catch (error) { status.textContent = 'Não foi possível solicitar a recuperação agora.'; console.error(error); }
+      });
+      setMode('login');
+    }
+
+    function getAccountService() {
+      if (!accountService) {
+        const config = window.CAREER_MODE_SUPABASE;
+        if (!config?.url || !config?.anonKey || !window.supabase?.createClient) {
+          throw new Error('Supabase não configurado.');
+        }
+        if (!supabaseClient) supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+        accountService = window.CareerModeAccountService.makeService(supabaseClient);
+      }
+      return accountService;
+    }
+
+    async function handleOnboardingSubmit(e) {
+      e.preventDefault();
+      const status = document.getElementById('auth-status');
+      const submit = document.getElementById('auth-submit');
+      const email = document.getElementById('onboarding-email').value.trim();
+      const password = document.getElementById('onboarding-password').value;
+      submit.disabled = true;
+      status.textContent = 'Aguarde...';
+      try {
+        const service = getAccountService();
+        if (authMode === 'register') {
+          const name = document.getElementById('onboarding-username').value.trim();
+          if (!name || password.length < 6) throw new Error('Informe o nome e uma senha de pelo menos 6 caracteres.');
+          const result = await service.register(email, password, { name });
+          if (!result.session) {
+            status.textContent = 'Verifique seu e-mail para confirmar a conta antes de entrar.';
+            return;
+          }
+        } else {
+          await service.login(email, password);
+        }
+        const user = await service.requireUser();
+        let cloud = await service.readState();
+        if (cloud.state) {
+          appData = { ...appData, ...cloud.state };
+        } else {
+          // First login: keep local data as a recovery copy, import only after
+          // explicit user confirmation to avoid cross-account data leakage.
+          const pending = await service.importLocalIfCloudEmpty();
+          if (pending.pendingImport && window.confirm('Importar os dados deste aparelho para sua conta?')) {
+            const result = await service.confirmImport(pending.pendingImport);
+            appData = { ...appData, ...result.state };
+            cloud = { state: result.state, revision: result.revision };
+          } else {
+            status.textContent = 'Conta criada. Para sincronizar, importe os dados deste aparelho ou inicie um perfil novo.';
+            return;
+          }
+        }
+        appData.user = {
+          ...appData.user, email: user.email,
+          name: appData.user?.name || user.user_metadata?.name || '',
+          onboarded: true
+        };
+        delete appData.user.password;
+        saveLocalStorageData();
+        pushAuthUserId = user.id;
+        startAccountSync(user, cloud);
+        document.getElementById('modal-onboarding').classList.add('hidden');
+        renderAll();
+        status.textContent = '';
+        // Do not alter the existing iPhone push subscription during auth migration.
+      } catch (error) {
+        console.error('Erro de autenticação:', error);
+        status.textContent = error.message || 'Falha ao autenticar.';
+      } finally {
+        submit.disabled = false;
+      }
+    }
+
+    function handleEditProfileSubmit(e) {
+      e.preventDefault();
+      playSound('success');
+      appData.user.name = document.getElementById('profile-username').value.trim();
+      appData.user.dob = document.getElementById('profile-user-dob').value;
+
+      const fileInput = document.getElementById('profile-avatar-file');
+      const processSave = (newAvatar) => {
+        if (newAvatar) appData.user.avatar = newAvatar;
+        saveLocalStorageData();
+        renderAll();
+        showToast("Perfil Atualizado!", "Suas alterações foram salvas.");
+      };
+
+      if (fileInput.files?.[0]) {
+        const reader = new FileReader();
+        reader.onload = evt => processSave(evt.target.result);
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        processSave(null);
+      }
+    }
+
+    function renderAll() {
+      // Render from the current in-memory state; do not overwrite remote updates.
+
+      renderUserProfile();
+      const stats = calculateStats();
+
+      document.getElementById('header-today-pts').innerText = `${stats.todayPts} pts`;
+      document.getElementById('sidebar-rank-tag').innerHTML = `<span class="w-2 h-2 rounded-full bg-cyan-400"></span>${stats.currentRank.name}`;
+      document.getElementById('home-rank-badge').innerText = `Patente: ${stats.currentRank.name}`;
+
+      if (stats.nextRank) {
+        const progress = ((stats.totalPts - stats.currentRank.minPts) / (stats.nextRank.minPts - stats.currentRank.minPts)) * 100;
+        document.getElementById('rank-progress-bar').style.width = `${Math.min(100, Math.max(0, progress))}%`;
+        document.getElementById('rank-progress-text').innerText = `${stats.totalPts} / ${stats.nextRank.minPts} pts`;
+        document.getElementById('next-rank-desc').innerText = `Próxima: ${stats.nextRank.name}`;
+      } else {
+        document.getElementById('rank-progress-bar').style.width = '100%';
+        document.getElementById('rank-progress-text').innerText = `${stats.totalPts} pts`;
+        document.getElementById('next-rank-desc').innerText = 'Patente Máxima (Kage)!';
+      }
+
+      renderHomeTasks();
+      renderTaskManager();
+      renderRankingTab();
+      renderAlarmsTab();
+      renderJournalTab();
+      lucide.createIcons();
+    }
+
+    function toggleTaskCompletion(taskId) {
+      const task = appData.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      if (!task.completedToday) {
+        playSound('success');
+      } else {
+        playSound('click');
+      }
+
+      commitTaskChange(tasks => {
+        const current = tasks.find(t => t.id === taskId);
+        if (!current) return false;
+        current.completedToday = !current.completedToday;
+      });
+    }
+
+    function renderHomeTasks() {
+      const container = document.getElementById('home-tasks-container');
+      const tasks = appData.tasks || [];
+      document.getElementById('completed-count-text').innerText = `${tasks.filter(t => t.completedToday).length}/${tasks.length} concluídas`;
+
+      if (tasks.length === 0) {
+        container.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-gray-500 text-sm">Nenhuma tarefa ativa. Adicione na aba Tarefas.</div>`;
+        return;
+      }
+
+      container.innerHTML = tasks.map((task) => `
+        <div class="task-item glass-card p-4 rounded-2xl border flex items-center justify-between gap-4 ${task.completedToday ? 'border-cyan-500/35 bg-cyan-500/5 opacity-70' : 'border-gray-800'}">
+          <div class="flex items-center gap-3">
+            <button type="button" data-task-id="${task.id}" class="task-check-btn w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${task.completedToday ? 'border-cyan-400 bg-cyan-500/20 text-cyan-400' : 'border-gray-600 hover:border-cyan-400'}">
+              ${task.completedToday ? '<i data-lucide="check" class="w-4 h-4"></i>' : ''}
+            </button>
+            <div>
+              <p class="font-medium text-sm md:text-base ${task.completedToday ? 'line-through text-gray-400' : 'text-gray-100'}">${escapeHtml(task.title)}</p>
+              <span class="text-xs text-gray-500">${task.category}</span>
+            </div>
+          </div>
+          <span class="px-3 py-1 text-xs font-bold rounded-lg ${task.completedToday ? 'bg-cyan-500/20 text-cyan-300' : 'bg-gray-800 text-gray-300'}">+${task.points} pts</span>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.task-check-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleTaskCompletion(btn.getAttribute('data-task-id'));
+        });
+      });
+    }
+
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+      return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[character]);
+    }
+
+    function renderTaskManager() {
+      document.getElementById('template-tasks-grid').innerHTML = templateTasks.map(tpl => {
+        const pts = categoryPointsMap[tpl.category] || 5;
+        return `
+          <div class="glass-card p-4 rounded-2xl border border-gray-800 flex flex-col justify-between gap-3">
+            <div>
+              <span class="text-[10px] font-bold text-cyan-400 uppercase">${tpl.category}</span>
+              <h5 class="text-sm font-semibold text-white mt-1">${escapeHtml(tpl.title)}</h5>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-gray-800">
+              <span class="text-xs font-bold text-amber-400">+${pts} pts</span>
+              <button type="button" data-tpl-id="${tpl.id}" class="add-tpl-btn px-2.5 py-1 bg-cyan-500/10 text-cyan-400 rounded-lg text-xs font-bold flex items-center gap-1">
+                <i data-lucide="plus" class="w-3 h-3"></i> Adicionar
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.add-tpl-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => addTemplateTask(e.currentTarget.getAttribute('data-tpl-id')));
+      });
+
+      const manage = document.getElementById('manage-tasks-container');
+      const tasks = appData.tasks || [];
+      if (tasks.length === 0) { manage.innerHTML = `<p class="text-xs text-gray-500">Nenhuma tarefa cadastrada.</p>`; return; }
+
+      manage.innerHTML = tasks.map(task => `
+        <div class="glass-card p-4 rounded-2xl border border-gray-800 flex items-center justify-between">
+          <div>
+            <h5 class="text-sm font-semibold text-white">${escapeHtml(task.title)}</h5>
+            <span class="text-xs text-gray-500">${task.category} • ${task.points} pts</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" data-id="${task.id}" class="edit-task-btn p-2 text-gray-400 hover:text-cyan-400"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+            <button type="button" data-id="${task.id}" class="delete-task-btn p-2 text-gray-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.edit-task-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => openEditTaskModal(e.currentTarget.getAttribute('data-id')));
+      });
+
+      document.querySelectorAll('.delete-task-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => confirmRemoveTask(e.currentTarget.getAttribute('data-id')));
+      });
+
+      lucide.createIcons();
+    }
+
+    function addTemplateTask(tplId) {
+      const tpl = templateTasks.find(t => t.id === tplId);
+      if (!tpl) return;
+      const points = categoryPointsMap[tpl.category] || 5;
+      if (commitTaskChange(tasks => {
+        tasks.push({ id: newTaskId(), title: tpl.title, category: tpl.category, points, completedToday: false });
+      })) {
+        playSound('success');
+        showToast('Tarefa adicionada', tpl.title);
+      }
+    }
+
+    function openEditTaskModal(taskId) {
+      const task = appData.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      document.getElementById('edit-task-id').value = task.id;
+      document.getElementById('task-title').value = task.title;
+      document.getElementById('task-category').value = task.category;
+      document.getElementById('task-modal-title').innerText = 'Editar Tarefa';
+      openModal('modal-task');
+    }
+
+    function confirmRemoveTask(taskId) {
+      showConfirmModal("Deseja realmente excluir esta tarefa?", () => {
+        playSound('delete');
+        if (commitTaskChange(tasks => {
+          const index = tasks.findIndex(t => t.id === taskId);
+          if (index < 0) return false;
+          tasks.splice(index, 1);
+        })) showToast('Removido', 'Tarefa excluída.');
+      });
+    }
+
+    function normalizeTaskTitle(value) {
+      // NFC unifica sequências Unicode equivalentes sem remover emojis,
+      // modificadores de tom de pele, bandeiras ou sequências ZWJ.
+      return String(value ?? '').normalize('NFC').trim();
+    }
+
+    function handleSaveTask(e) {
+      e.preventDefault();
+      const editId = document.getElementById('edit-task-id').value;
+      const titleInput = document.getElementById('task-title');
+      const title = normalizeTaskTitle(titleInput.value);
+      const category = document.getElementById('task-category').value;
+      const points = categoryPointsMap[category] || 5;
+      if (!title) {
+        titleInput.setCustomValidity('Informe um título para a tarefa.');
+        titleInput.reportValidity();
+        titleInput.setCustomValidity('');
+        return;
+      }
+      const saved = commitTaskChange(tasks => {
+        if (editId) {
+          const task = tasks.find(t => t.id === editId);
+          if (!task) return false;
+          Object.assign(task, { title, category, points });
+        } else {
+          tasks.push({ id: newTaskId(), title, category, points, completedToday: false });
+        }
+      });
+      if (!saved) return;
+      closeModal('modal-task');
+      playSound('success');
+      showToast('Sucesso!', editId ? 'Tarefa atualizada.' : 'Nova tarefa adicionada.');
+    }
+
+    function renderRankingTab() {
+      const historyList = document.getElementById('monthly-history-list');
+      const history = appData.historyMonths || [];
+      const stats = calculateStats();
+      
+      if (history.length === 0) {
+        historyList.innerHTML = `<p class="text-xs text-gray-500">Nenhum mês anterior registrado.</p>`;
+      } else {
+        historyList.innerHTML = history.map(h => `
+          <div class="p-3 rounded-xl border border-gray-800 bg-gray-900/40 flex justify-between text-xs">
+            <span class="text-gray-300 font-semibold">${h.month}</span>
+            <span class="text-cyan-400 font-bold">${h.points} pts</span>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('ranks-hierarchy-list').innerHTML = ranks.map(r => {
+        const isCurrent = stats.currentRank.name === r.name;
+        return `
+          <div class="p-3 rounded-xl border ${isCurrent ? 'border-cyan-500 bg-cyan-500/10 shadow-lg' : 'border-gray-800 bg-gray-900/40'} flex justify-between text-xs items-center">
+            <span class="${isCurrent ? 'text-cyan-300 font-extrabold' : 'text-gray-200 font-bold'} flex items-center gap-2">
+              ${r.name} ${isCurrent ? '<span class="text-[10px] bg-cyan-500 text-gray-950 px-2 py-0.5 rounded-full font-bold">Atual</span>' : ''}
+            </span>
+            <span class="text-gray-400">${r.maxPts === Infinity ? `${r.minPts}+ pts` : `${r.minPts} - ${r.maxPts} pts`}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAlarmsTab() {
+      const reminder = appData.notifications || { checkinEnabled: true, checkinTime: '20:00' };
+      const enabledInput = document.getElementById('checkin-reminder-enabled');
+      const timeInput = document.getElementById('checkin-reminder-time');
+      if (enabledInput) enabledInput.checked = reminder.checkinEnabled !== false;
+      if (timeInput) timeInput.value = reminder.checkinTime || '20:00';
+      const container = document.getElementById('alarms-list-container');
+      const alarms = appData.alarms || [];
+      if (alarms.length === 0) { container.innerHTML = `<p class="text-xs text-gray-500">Nenhum alarme configurado.</p>`; return; }
+
+      container.innerHTML = alarms.map(alm => `
+        <div class="glass-card p-4 rounded-2xl border border-gray-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-lg font-extrabold text-cyan-400">${alm.time}</span>
+            <div>
+              <h5 class="text-sm font-semibold text-white">${escapeHtml(alm.title)}</h5>
+              <span class="text-xs text-gray-500">Notificação programada</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" data-id="${alm.id}" class="edit-alarm-btn p-2 text-gray-400 hover:text-cyan-400"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+            <button type="button" data-id="${alm.id}" class="delete-alarm-btn p-2 text-gray-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.edit-alarm-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => openEditAlarmModal(e.currentTarget.getAttribute('data-id')));
+      });
+
+      document.querySelectorAll('.delete-alarm-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => confirmRemoveAlarm(e.currentTarget.getAttribute('data-id')));
+      });
+
+      lucide.createIcons();
+    }
+
+    function openEditAlarmModal(almId) {
+      const alm = appData.alarms.find(a => a.id === almId);
+      if (!alm) return;
+      document.getElementById('edit-alarm-id').value = alm.id;
+      document.getElementById('alarm-title').value = alm.title;
+      document.getElementById('alarm-time').value = alm.time;
+      document.getElementById('alarm-modal-title').innerText = 'Editar Alarme';
+      openModal('modal-alarm');
+    }
+
+    function confirmRemoveAlarm(almId) {
+      showConfirmModal("Deseja excluir este alarme?", () => {
+        playSound('delete');
+        appData.alarms = appData.alarms.filter(a => a.id !== almId);
+        if (supabaseClient && pushAuthUserId) {
+          supabaseClient.from('notification_schedules').delete().eq('user_id', pushAuthUserId).eq('source_id', 'alarm:' + almId).then(() => {});
+        }
+        saveLocalStorageData();
+        renderAlarmsTab();
+        showToast("Alarme Removido", "");
+      });
+    }
+
+    function handleSaveAlarm(e) {
+      e.preventDefault();
+      playSound('success');
+      const editId = document.getElementById('edit-alarm-id').value;
+      const title = document.getElementById('alarm-title').value.trim();
+      const time = document.getElementById('alarm-time').value;
+
+      if (editId) {
+        const alm = appData.alarms.find(a => a.id === editId);
+        if (alm) {
+          alm.title = title;
+          alm.time = time;
+        }
+      } else {
+        appData.alarms.push({ id: 'alm_' + Date.now(), title, time, firedToday: false });
+      }
+
+      saveLocalStorageData();
+      syncPushSchedules().catch(error => console.warn('Não foi possível sincronizar alarme push:', error));
+      closeModal('modal-alarm');
+      renderAlarmsTab();
+      showToast("Sucesso!", editId ? "Alarme atualizado." : "Alarme configurado.");
+    }
+
+    function startAlarmChecker() {
+      setInterval(() => {
+        const now = new Date();
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
+        if (appData.alarms) {
+          appData.alarms.forEach(alm => {
+            if (alm.time === currentTime && !alm.firedToday) {
+              alm.firedToday = true;
+              if (!pushAuthUserId) {
+                sendNativeNotification(`Alarme: ${alm.title}`, `Horário programado atingido: ${alm.time}`);
+              }
+              saveLocalStorageData();
+              showToast("Alarme Disparado!", `${alm.title} às ${alm.time}`);
+            }
+          });
+        }
+      }, 10000);
+    }
+
+    function renderJournalTab() {
+      const grid = document.getElementById('journal-entries-grid');
+      const journal = appData.journal || [];
+      if (journal.length === 0) { grid.innerHTML = `<p class="text-xs text-gray-500">Nenhum registro no diário.</p>`; return; }
+
+      grid.innerHTML = journal.map(entry => `
+        <div class="glass-card p-4 rounded-2xl border border-gray-800 space-y-2">
+          <div class="flex justify-between text-xs text-gray-500">
+            <span>${entry.date}</span>
+            <div class="flex items-center gap-1">
+              <button type="button" data-id="${entry.id}" class="edit-journal-btn p-1 text-gray-400 hover:text-cyan-400"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+              <button type="button" data-id="${entry.id}" class="delete-journal-btn p-1 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
+          </div>
+          <h5 class="text-sm font-bold text-white">${escapeHtml(entry.title)}</h5>
+          <p class="text-xs text-gray-300 whitespace-pre-wrap">${escapeHtml(entry.content)}</p>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.edit-journal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => openEditJournalModal(e.currentTarget.getAttribute('data-id')));
+      });
+
+      document.querySelectorAll('.delete-journal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => confirmRemoveJournal(e.currentTarget.getAttribute('data-id')));
+      });
+
+      lucide.createIcons();
+    }
+
+    function openEditJournalModal(entryId) {
+      const entry = appData.journal.find(j => j.id === entryId);
+      if (!entry) return;
+      document.getElementById('edit-journal-id').value = entry.id;
+      document.getElementById('journal-title').value = entry.title;
+      document.getElementById('journal-content').value = entry.content;
+      document.getElementById('journal-modal-title').innerText = 'Editar Anotação';
+      openModal('modal-journal');
+    }
+
+    function confirmRemoveJournal(entryId) {
+      showConfirmModal("Deseja excluir esta anotação?", () => {
+        playSound('delete');
+        appData.journal = appData.journal.filter(j => j.id !== entryId);
+        saveLocalStorageData();
+        renderJournalTab();
+        showToast("Removido", "Anotação excluída.");
+      });
+    }
+
+    function handleSaveJournal(e) {
+      e.preventDefault();
+      playSound('success');
+      const editId = document.getElementById('edit-journal-id').value;
+      const title = document.getElementById('journal-title').value.trim();
+      const content = document.getElementById('journal-content').value.trim();
+
+      if (editId) {
+        const entry = appData.journal.find(j => j.id === editId);
+        if (entry) {
+          entry.title = title;
+          entry.content = content;
+        }
+      } else {
+        appData.journal.unshift({ id: 'jnl_' + Date.now(), date: new Date().toLocaleDateString('pt-BR'), title, content });
+      }
+
+      saveLocalStorageData();
+      closeModal('modal-journal');
+      renderJournalTab();
+      showToast("Sucesso!", editId ? "Anotação atualizada." : "Anotação salva.");
+    }
+  </script>
+</body>
+</html>
