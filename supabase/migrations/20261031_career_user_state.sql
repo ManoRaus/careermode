@@ -58,7 +58,9 @@ begin
 
   -- INSERT/UPDATE are authorized by RLS and grants. See grants below.
   insert into public.career_user_state (user_id, payload, revision, updated_at)
-  values (v_uid, p_payload, 1, now())
+  select v_uid, p_payload, 1, now()
+  where p_expected_revision = 0
+     or exists (select 1 from public.career_user_state where user_id = v_uid)
   on conflict (user_id) do update
     set payload = excluded.payload,
         revision = public.career_user_state.revision + 1,
