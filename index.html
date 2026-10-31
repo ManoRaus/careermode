@@ -864,6 +864,7 @@
     }
 
     async function flushAccountSync() {
+      syncTimer = null;
       if (!syncPending || syncBusy || !syncOwner) return;
       syncBusy = true;
       syncPending = false;
@@ -879,9 +880,7 @@
         showToast('Sincronização pendente', 'Os dados continuam neste aparelho. Evite editar em outro dispositivo até resolver o conflito.');
       } finally {
         syncBusy = false;
-        if (syncPending && syncOwner === owner && !syncTimer) {
-          // Never retry revision conflicts automatically: remote data may have changed.
-        }
+        // A revision conflict requires manual reconciliation, never blind retries.
       }
     }
 
@@ -1410,7 +1409,8 @@
         const service = getAccountService();
         const user = await service.requireUser();
         const cloud = await service.readState();
-        if (cloud.state) appData = { ...appData, ...cloud.state };
+        if (!cloud.state) return; // Do not silently upload legacy local data.
+        appData = { ...appData, ...cloud.state };
         appData.user = { ...appData.user, email: user.email,
           name: appData.user?.name || user.user_metadata?.name || '', onboarded: true };
         delete appData.user.password;
@@ -1487,7 +1487,7 @@
           await service.login(email, password);
         }
         const user = await service.requireUser();
-        const cloud = await service.readState();
+        let cloud = await service.readState();
         if (cloud.state) {
           appData = { ...appData, ...cloud.state };
         } else {
@@ -1497,6 +1497,10 @@
           if (pending.pendingImport && window.confirm('Importar os dados deste aparelho para sua conta?')) {
             const result = await service.confirmImport(pending.pendingImport);
             appData = { ...appData, ...result.state };
+            cloud = { state: result.state, revision: result.revision };
+          } else {
+            status.textContent = 'Conta criada. Para sincronizar, importe os dados deste aparelho ou inicie um perfil novo.';
+            return;
           }
         }
         appData.user = {
@@ -1507,6 +1511,7 @@
         delete appData.user.password;
         saveLocalStorageData();
         pushAuthUserId = user.id;
+        startAccountSync(user, cloud);
         document.getElementById('modal-onboarding').classList.add('hidden');
         renderAll();
         status.textContent = '';
