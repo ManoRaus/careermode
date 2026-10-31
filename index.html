@@ -23,6 +23,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="auth-sync.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -261,7 +262,7 @@
   </div>
 
   <!-- TOAST NOTIFICATION -->
-  <div id="toast-notification" class="fixed top-5 right-5 z-50 translate-y-[-200%] opacity-0 glass-card px-5 py-3 rounded-2xl border border-cyan-500/40 bg-gray-900/90 shadow-2xl flex items-center gap-3 transition-all duration-300 pointer-events-none">
+  <div id="toast-notification" class="fixed top-0 left-0 right-0 z-[100] translate-y-[-200%] opacity-0 glass-card w-full max-w-none px-5 py-4 border-b border-cyan-500/40 bg-gray-900/95 shadow-2xl flex items-center justify-center gap-3 transition-all duration-300 pointer-events-none" style="padding-top: max(1rem, env(safe-area-inset-top))">
     <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
       <i data-lucide="check" class="w-4 h-4"></i>
     </div>
@@ -572,6 +573,7 @@
         <p class="text-xs md:text-sm text-gray-400">Insira seu e-mail e senha cadastrados para acessar o Web App.</p>
       </div>
 
+      <div class="flex gap-2 text-xs"><button type="button" id="auth-mode-login" class="flex-1 rounded-lg bg-cyan-500 text-gray-950 p-2 font-bold">Entrar</button><button type="button" id="auth-mode-register" class="flex-1 rounded-lg bg-gray-800 text-white p-2 font-bold">Criar conta</button></div>
       <form id="form-onboarding" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-gray-300 mb-1">E-mail da Conta</label>
@@ -581,6 +583,7 @@
           <label class="block text-xs font-semibold text-gray-300 mb-1">Senha de Acesso</label>
           <input type="password" id="onboarding-password" required placeholder="••••••••" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
         </div>
+        <div id="auth-register-details" class="hidden">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-1">Nome de Usuário</label>
@@ -600,10 +603,13 @@
             <input type="file" id="onboarding-avatar-file" accept="image/*" class="text-xs text-gray-400">
           </div>
         </div>
-        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-sky-400 text-gray-950 font-extrabold rounded-xl text-sm shadow-lg">
+        </div>
+        <button type="submit" id="auth-submit" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-sky-400 text-gray-950 font-extrabold rounded-xl text-sm shadow-lg">
           Entrar no Aplicativo
         </button>
       </form>
+      <button type="button" id="auth-reset-password" class="text-xs text-cyan-300 underline">Esqueci minha senha</button>
+      <p id="auth-status" role="status" class="text-xs text-gray-300"></p>
     </div>
   </div>
 
@@ -799,6 +805,16 @@
       updateDateDisplays();
       startAlarmChecker();
       initGlobalEventListeners();
+      initAccountControls();
+      window.addEventListener('storage', event => {
+        if (event.key !== 'cm_career_mode_app_data' || !event.newValue) return;
+        try {
+          const next = JSON.parse(event.newValue);
+          if (!Array.isArray(next.tasks)) return;
+          appData = { ...appData, ...next };
+          renderAll();
+        } catch (error) { console.warn('Falha ao atualizar outra aba', error); }
+      });
 
       const splash = document.getElementById('splash-screen');
       if (splash) {
@@ -806,18 +822,77 @@
         setTimeout(() => splash.remove(), 300);
       }
 
-      if (!appData.user || !appData.user.onboarded) {
-        openOnboardingModal();
-      } else {
-        document.getElementById('modal-onboarding').classList.add('hidden');
-        checkNotificationPermission();
-      }
-
+      openOnboardingModal();
       renderAll();
+      restoreAccountSession();
     });
 
     let supabaseClient = null;
     let pushAuthUserId = null;
+    let accountService = null;
+    let syncRevision = null;
+    let syncOwner = null;
+    let syncTimer = null;
+    let syncBusy = false;
+    let syncConflict = false;
+    let syncPending = false;
+    let syncUnsubscribe = null;
+
+    function startAccountSync(user, cloud) {
+      if (syncUnsubscribe) syncUnsubscribe();
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = null;
+      syncOwner = user.id;
+      syncRevision = cloud.revision;
+      syncPending = false;
+      syncConflict = false;
+      const service = getAccountService();
+      syncUnsubscribe = service.subscribe(async error => {
+        if (error || syncPending || syncBusy || syncOwner !== user.id) return;
+        try {
+          const latest = await service.readState();
+          if (latest.state && latest.revision > syncRevision && !syncPending && !syncBusy) {
+            appData = { ...appData, ...latest.state };
+            syncRevision = latest.revision;
+            renderAll();
+          }
+        } catch (err) { console.warn('Falha ao receber atualização remota', err); }
+      });
+    }
+
+    function queueAccountSync() {
+      if (!syncOwner || syncRevision === null) return;
+      syncPending = true;
+      if (syncConflict) return;
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(flushAccountSync, 450);
+    }
+
+    async function flushAccountSync() {
+      syncTimer = null;
+      if (!syncPending || syncBusy || !syncOwner) return;
+      syncBusy = true;
+      syncPending = false;
+      const owner = syncOwner;
+      const snapshot = JSON.parse(JSON.stringify(appData));
+      try {
+        const result = await getAccountService().saveState(snapshot, syncRevision);
+        if (syncOwner !== owner) return;
+        syncRevision = result.revision;
+      } catch (error) {
+        console.error('Sincronização interrompida', error);
+        syncPending = true;
+        syncConflict = true;
+        showToast('Sincronização pendente', 'Os dados continuam neste aparelho. Evite editar em outro dispositivo até resolver o conflito.');
+      } finally {
+        syncBusy = false;
+        if (syncPending && syncOwner === owner && !syncTimer && !syncConflict) {
+          syncTimer = setTimeout(flushAccountSync, 800);
+        }
+      }
+    }
+
+    let authMode = 'login';
 
     function isPushConfigured() {
       const config = window.CAREER_MODE_SUPABASE;
@@ -1004,9 +1079,32 @@
       }
     }
 
+    function newTaskId() {
+      return 'task_' + (window.crypto?.randomUUID?.() || Date.now() + '_' + Math.random().toString(36).slice(2));
+    }
+
+    function commitTaskChange(mutator) {
+      const previous = JSON.stringify(appData.tasks || []);
+      try {
+        if (!Array.isArray(appData.tasks)) appData.tasks = [];
+        const result = mutator(appData.tasks);
+        if (result === false) return false;
+        saveLocalStorageData();
+        renderAll();
+        return true;
+      } catch (error) {
+        appData.tasks = JSON.parse(previous);
+        console.error('Falha ao salvar tarefa', error);
+        renderAll();
+        showToast('Não foi possível salvar', 'Verifique o armazenamento do aparelho.');
+        return false;
+      }
+    }
+
     function saveLocalStorageData() {
       if (appData.user) delete appData.user.password;
       localStorage.setItem('cm_career_mode_app_data', JSON.stringify(appData));
+      queueAccountSync();
     }
 
     function calculateAge(dobString) {
@@ -1043,12 +1141,14 @@
       }
     }
 
+    let toastHideTimer = null;
     function showToast(title, desc) {
       const toast = document.getElementById('toast-notification');
       document.getElementById('toast-title').innerText = title;
       document.getElementById('toast-desc').innerText = desc;
+      if (toastHideTimer) clearTimeout(toastHideTimer);
       toast.classList.remove('translate-y-[-200%]', 'opacity-0');
-      setTimeout(() => toast.classList.add('translate-y-[-200%]', 'opacity-0'), 2500);
+      toastHideTimer = setTimeout(() => toast.classList.add('translate-y-[-200%]', 'opacity-0'), 2500);
     }
 
     function showConfirmModal(message, callback) {
@@ -1312,25 +1412,135 @@
       }
     }
 
-    function handleOnboardingSubmit(e) {
-      e.preventDefault();
-      playSound('success');
-      appData.user = {
-        email: document.getElementById('onboarding-email').value.trim(),
-        name: document.getElementById('onboarding-username').value.trim(),
-        dob: document.getElementById('onboarding-dob').value,
-        avatar: tempAvatarBase64 || appData.user?.avatar || null,
-        onboarded: true,
-        weeklyReport: true
-      };
-      saveLocalStorageData();
-      closeModal('modal-onboarding');
-      
-      setTimeout(() => {
-        checkNotificationPermission();
-      }, 300);
+    async function restoreAccountSession() {
+      try {
+        const service = getAccountService();
+        const user = await service.requireUser();
+        const cloud = await service.readState();
+        if (!cloud.state) { document.getElementById('modal-onboarding').classList.remove('hidden'); return; } // Require explicit first-time import.
+        appData = { ...appData, ...cloud.state };
+        appData.user = { ...appData.user, email: user.email,
+          name: appData.user?.name || user.user_metadata?.name || '', onboarded: true };
+        delete appData.user.password;
+        pushAuthUserId = user.id;
+        startAccountSync(user, cloud);
+        document.getElementById('modal-onboarding').classList.add('hidden');
+        renderAll();
+      } catch (error) {
+        document.getElementById('modal-onboarding').classList.remove('hidden');
+      }
+    }
 
-      renderAll();
+    function initAccountControls() {
+      const loginButton = document.getElementById('auth-mode-login');
+      const registerButton = document.getElementById('auth-mode-register');
+      const details = document.getElementById('auth-register-details');
+      const submit = document.getElementById('auth-submit');
+      function setMode(mode) {
+        authMode = mode;
+        details.classList.toggle('hidden', mode !== 'register');
+        document.getElementById('onboarding-username').required = mode === 'register';
+        document.getElementById('onboarding-dob').required = mode === 'register';
+        submit.textContent = mode === 'register' ? 'Criar minha conta' : 'Entrar na minha conta';
+        loginButton.classList.toggle('bg-cyan-500', mode === 'login');
+        registerButton.classList.toggle('bg-cyan-500', mode === 'register');
+        document.getElementById('auth-reset-password').classList.toggle('hidden', mode === 'register');
+        document.getElementById('auth-status').textContent = '';
+      }
+      loginButton.addEventListener('click', () => setMode('login'));
+      registerButton.addEventListener('click', () => setMode('register'));
+      document.getElementById('auth-reset-password').addEventListener('click', async () => {
+        const email = document.getElementById('onboarding-email').value.trim();
+        const status = document.getElementById('auth-status');
+        if (!email) { status.textContent = 'Informe seu e-mail primeiro.'; return; }
+        try {
+          await getAccountService().resetPassword(email, window.location.origin + window.location.pathname);
+          status.textContent = 'Se o endereço estiver cadastrado, você receberá instruções por e-mail.';
+        } catch (error) { status.textContent = 'Não foi possível solicitar a recuperação agora.'; console.error(error); }
+      });
+      setMode('login');
+    }
+
+    function getAccountService() {
+      if (!accountService) {
+        const config = window.CAREER_MODE_SUPABASE;
+        if (!config?.url || !config?.anonKey || !window.supabase?.createClient) {
+          throw new Error('Supabase não configurado.');
+        }
+        if (!supabaseClient) supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+        accountService = window.CareerModeAccountService.makeService(supabaseClient);
+      }
+      return accountService;
+    }
+
+    async function handleOnboardingSubmit(e) {
+      e.preventDefault();
+      const status = document.getElementById('auth-status');
+      const submit = document.getElementById('auth-submit');
+      const email = document.getElementById('onboarding-email').value.trim();
+      const password = document.getElementById('onboarding-password').value;
+      submit.disabled = true;
+      status.textContent = 'Aguarde...';
+      try {
+        const service = getAccountService();
+        if (authMode === 'register') {
+          const name = document.getElementById('onboarding-username').value.trim();
+          if (!name || password.length < 6) throw new Error('Informe o nome e uma senha de pelo menos 6 caracteres.');
+          const result = await service.register(email, password, { name });
+          if (!result.session) {
+            status.textContent = 'Verifique seu e-mail para confirmar a conta antes de entrar.';
+            return;
+          }
+        } else {
+          await service.login(email, password);
+        }
+        const user = await service.requireUser();
+        let cloud = await service.readState();
+        if (cloud.state) {
+          appData = { ...appData, ...cloud.state };
+        } else {
+          // First login: keep local data as a recovery copy, import only after
+          // explicit user confirmation to avoid cross-account data leakage.
+          const pending = await service.importLocalIfCloudEmpty();
+          if (pending.pendingImport && window.confirm('Importar os dados deste aparelho para sua conta?')) {
+            const result = await service.confirmImport(pending.pendingImport);
+            appData = { ...appData, ...result.state };
+            cloud = { state: result.state, revision: result.revision };
+          } else {
+            if (!window.confirm('Criar um perfil novo e vazio nesta conta? Os dados antigos deste aparelho serão mantidos como cópia de segurança, mas não serão importados.')) {
+              status.textContent = 'Nenhum dado foi importado.';
+              return;
+            }
+            const fresh = {
+              user: { name: user.user_metadata?.name || '', email: user.email, onboarded: true },
+              tasks: [], alarms: [], journal: [], historyMonths: [],
+              checkin: { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 },
+              notifications: { checkinEnabled: true, checkinTime: '20:00' }
+            };
+            const result = await service.saveState(fresh, 0);
+            appData = { ...appData, ...fresh };
+            cloud = { state: result.state, revision: result.revision };
+          }
+        }
+        appData.user = {
+          ...appData.user, email: user.email,
+          name: appData.user?.name || user.user_metadata?.name || '',
+          onboarded: true
+        };
+        delete appData.user.password;
+        saveLocalStorageData();
+        pushAuthUserId = user.id;
+        startAccountSync(user, cloud);
+        document.getElementById('modal-onboarding').classList.add('hidden');
+        renderAll();
+        status.textContent = '';
+        // Do not alter the existing iPhone push subscription during auth migration.
+      } catch (error) {
+        console.error('Erro de autenticação:', error);
+        status.textContent = error.message || 'Falha ao autenticar.';
+      } finally {
+        submit.disabled = false;
+      }
     }
 
     function handleEditProfileSubmit(e) {
@@ -1395,9 +1605,11 @@
         playSound('click');
       }
 
-      task.completedToday = !task.completedToday;
-      saveLocalStorageData();
-      renderAll();
+      commitTaskChange(tasks => {
+        const current = tasks.find(t => t.id === taskId);
+        if (!current) return false;
+        current.completedToday = !current.completedToday;
+      });
     }
 
     function renderHomeTasks() {
@@ -1493,13 +1705,13 @@
 
     function addTemplateTask(tplId) {
       const tpl = templateTasks.find(t => t.id === tplId);
-      if (tpl) {
+      if (!tpl) return;
+      const points = categoryPointsMap[tpl.category] || 5;
+      if (commitTaskChange(tasks => {
+        tasks.push({ id: newTaskId(), title: tpl.title, category: tpl.category, points, completedToday: false });
+      })) {
         playSound('success');
-        const points = categoryPointsMap[tpl.category] || 5;
-        appData.tasks.push({ id: 'task_' + (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random().toString(36).slice(2)), title: tpl.title, category: tpl.category, points, completedToday: false });
-        saveLocalStorageData();
-        renderAll();
-        showToast("Tarefa Adicionada", tpl.title);
+        showToast('Tarefa adicionada', tpl.title);
       }
     }
 
@@ -1516,10 +1728,11 @@
     function confirmRemoveTask(taskId) {
       showConfirmModal("Deseja realmente excluir esta tarefa?", () => {
         playSound('delete');
-        appData.tasks = appData.tasks.filter(t => t.id !== taskId);
-        saveLocalStorageData();
-        renderAll();
-        showToast("Removido", "Tarefa excluída.");
+        if (commitTaskChange(tasks => {
+          const index = tasks.findIndex(t => t.id === taskId);
+          if (index < 0) return false;
+          tasks.splice(index, 1);
+        })) showToast('Removido', 'Tarefa excluída.');
       });
     }
 
@@ -1536,36 +1749,25 @@
       const title = normalizeTaskTitle(titleInput.value);
       const category = document.getElementById('task-category').value;
       const points = categoryPointsMap[category] || 5;
-
       if (!title) {
         titleInput.setCustomValidity('Informe um título para a tarefa.');
         titleInput.reportValidity();
         titleInput.setCustomValidity('');
         return;
       }
-
-      try {
-        if (!Array.isArray(appData.tasks)) appData.tasks = [];
+      const saved = commitTaskChange(tasks => {
         if (editId) {
-          const task = appData.tasks.find(t => t.id === editId);
-          if (task) {
-            task.title = title;
-            task.category = category;
-            task.points = points;
-          }
+          const task = tasks.find(t => t.id === editId);
+          if (!task) return false;
+          Object.assign(task, { title, category, points });
         } else {
-          appData.tasks.push({ id: 'task_' + Date.now(), title, category, points, completedToday: false });
+          tasks.push({ id: newTaskId(), title, category, points, completedToday: false });
         }
-
-        saveLocalStorageData();
-        closeModal('modal-task');
-        renderAll();
-        playSound('success');
-        showToast("Sucesso!", editId ? "Tarefa atualizada." : "Nova tarefa adicionada.");
-      } catch (error) {
-        console.error('Erro ao salvar tarefa:', error);
-        showToast("Não foi possível salvar", "Tente novamente. Seus dados anteriores foram preservados.");
-      }
+      });
+      if (!saved) return;
+      closeModal('modal-task');
+      playSound('success');
+      showToast('Sucesso!', editId ? 'Tarefa atualizada.' : 'Nova tarefa adicionada.');
     }
 
     function renderRankingTab() {
