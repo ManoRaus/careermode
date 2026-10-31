@@ -262,7 +262,7 @@
   </div>
 
   <!-- TOAST NOTIFICATION -->
-  <div id="toast-notification" class="fixed top-5 right-5 z-50 translate-y-[-200%] opacity-0 glass-card px-5 py-3 rounded-2xl border border-cyan-500/40 bg-gray-900/90 shadow-2xl flex items-center gap-3 transition-all duration-300 pointer-events-none">
+  <div id="toast-notification" class="fixed top-0 left-0 right-0 z-[100] translate-y-[-200%] opacity-0 glass-card w-full max-w-none px-5 py-4 border-b border-cyan-500/40 bg-gray-900/95 shadow-2xl flex items-center justify-center gap-3 transition-all duration-300 pointer-events-none" style="padding-top: max(1rem, env(safe-area-inset-top))">
     <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
       <i data-lucide="check" class="w-4 h-4"></i>
     </div>
@@ -806,6 +806,15 @@
       startAlarmChecker();
       initGlobalEventListeners();
       initAccountControls();
+      window.addEventListener('storage', event => {
+        if (event.key !== 'cm_career_mode_app_data' || !event.newValue) return;
+        try {
+          const next = JSON.parse(event.newValue);
+          if (!Array.isArray(next.tasks)) return;
+          appData = { ...appData, ...next };
+          renderAll();
+        } catch (error) { console.warn('Falha ao atualizar outra aba', error); }
+      });
 
       const splash = document.getElementById('splash-screen');
       if (splash) {
@@ -1047,12 +1056,14 @@
       }
     }
 
+    let toastHideTimer = null;
     function showToast(title, desc) {
       const toast = document.getElementById('toast-notification');
       document.getElementById('toast-title').innerText = title;
       document.getElementById('toast-desc').innerText = desc;
+      if (toastHideTimer) clearTimeout(toastHideTimer);
       toast.classList.remove('translate-y-[-200%]', 'opacity-0');
-      setTimeout(() => toast.classList.add('translate-y-[-200%]', 'opacity-0'), 2500);
+      toastHideTimer = setTimeout(() => toast.classList.add('translate-y-[-200%]', 'opacity-0'), 2500);
     }
 
     function showConfirmModal(message, callback) {
