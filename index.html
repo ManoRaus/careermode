@@ -834,14 +834,18 @@
     let syncOwner = null;
     let syncTimer = null;
     let syncBusy = false;
+    let syncConflict = false;
     let syncPending = false;
     let syncUnsubscribe = null;
 
     function startAccountSync(user, cloud) {
       if (syncUnsubscribe) syncUnsubscribe();
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = null;
       syncOwner = user.id;
       syncRevision = cloud.revision;
       syncPending = false;
+      syncConflict = false;
       const service = getAccountService();
       syncUnsubscribe = service.subscribe(async error => {
         if (error || syncPending || syncBusy || syncOwner !== user.id) return;
@@ -859,6 +863,7 @@
     function queueAccountSync() {
       if (!syncOwner || syncRevision === null) return;
       syncPending = true;
+      if (syncConflict) return;
       if (syncTimer) clearTimeout(syncTimer);
       syncTimer = setTimeout(flushAccountSync, 450);
     }
@@ -877,10 +882,13 @@
       } catch (error) {
         console.error('Sincronização interrompida', error);
         syncPending = true;
+        syncConflict = true;
         showToast('Sincronização pendente', 'Os dados continuam neste aparelho. Evite editar em outro dispositivo até resolver o conflito.');
       } finally {
         syncBusy = false;
-        // A revision conflict requires manual reconciliation, never blind retries.
+        if (syncPending && syncOwner === owner && !syncTimer && !syncConflict) {
+          syncTimer = setTimeout(flushAccountSync, 800);
+        }
       }
     }
 
@@ -1409,7 +1417,7 @@
         const service = getAccountService();
         const user = await service.requireUser();
         const cloud = await service.readState();
-        if (!cloud.state) return; // Do not silently upload legacy local data.
+        if (!cloud.state) { document.getElementById('modal-onboarding').classList.remove('hidden'); return; } // Require explicit first-time import.
         appData = { ...appData, ...cloud.state };
         appData.user = { ...appData.user, email: user.email,
           name: appData.user?.name || user.user_metadata?.name || '', onboarded: true };
@@ -1499,8 +1507,19 @@
             appData = { ...appData, ...result.state };
             cloud = { state: result.state, revision: result.revision };
           } else {
-            status.textContent = 'Conta criada. Para sincronizar, importe os dados deste aparelho ou inicie um perfil novo.';
-            return;
+            if (!window.confirm('Criar um perfil novo e vazio nesta conta? Os dados antigos deste aparelho serão mantidos como cópia de segurança, mas não serão importados.')) {
+              status.textContent = 'Nenhum dado foi importado.';
+              return;
+            }
+            const fresh = {
+              user: { name: user.user_metadata?.name || '', email: user.email, onboarded: true },
+              tasks: [], alarms: [], journal: [], historyMonths: [],
+              checkin: { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 },
+              notifications: { checkinEnabled: true, checkinTime: '20:00' }
+            };
+            const result = await service.saveState(fresh, 0);
+            appData = { ...appData, ...fresh };
+            cloud = { state: result.state, revision: result.revision };
           }
         }
         appData.user = {
