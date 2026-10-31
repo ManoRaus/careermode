@@ -36,7 +36,9 @@ Deno.serve(async (request) => {
     let clock;
     try { clock = localClock(now, schedule.time_zone || "America/Sao_Paulo"); }
     catch (_) { continue; }
-    if (clock.time !== String(schedule.local_time).slice(0, 5) || schedule.last_sent_date === clock.date) continue;
+    const scheduledTime = String(schedule.local_time).slice(0, 5);
+    // GitHub Actions runs every five minutes; send on the first run at or after the scheduled local time.
+    if (clock.time < scheduledTime || schedule.last_sent_date === clock.date) continue;
 
     const { data: subscriptions, error: subError } = await admin.from("push_subscriptions")
       .select("id,endpoint,p256dh,auth").eq("user_id", schedule.user_id);
