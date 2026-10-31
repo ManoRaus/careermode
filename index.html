@@ -23,6 +23,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="auth-sync.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -572,6 +573,7 @@
         <p class="text-xs md:text-sm text-gray-400">Insira seu e-mail e senha cadastrados para acessar o Web App.</p>
       </div>
 
+      <div class="flex gap-2 text-xs"><button type="button" id="auth-mode-login" class="flex-1 rounded-lg bg-cyan-500 text-gray-950 p-2 font-bold">Entrar</button><button type="button" id="auth-mode-register" class="flex-1 rounded-lg bg-gray-800 text-white p-2 font-bold">Criar conta</button></div>
       <form id="form-onboarding" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-gray-300 mb-1">E-mail da Conta</label>
@@ -581,6 +583,7 @@
           <label class="block text-xs font-semibold text-gray-300 mb-1">Senha de Acesso</label>
           <input type="password" id="onboarding-password" required placeholder="••••••••" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
         </div>
+        <div id="auth-register-details" class="hidden">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-1">Nome de Usuário</label>
@@ -600,10 +603,13 @@
             <input type="file" id="onboarding-avatar-file" accept="image/*" class="text-xs text-gray-400">
           </div>
         </div>
-        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-sky-400 text-gray-950 font-extrabold rounded-xl text-sm shadow-lg">
+        </div>
+        <button type="submit" id="auth-submit" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-sky-400 text-gray-950 font-extrabold rounded-xl text-sm shadow-lg">
           Entrar no Aplicativo
         </button>
       </form>
+      <button type="button" id="auth-reset-password" class="text-xs text-cyan-300 underline">Esqueci minha senha</button>
+      <p id="auth-status" role="status" class="text-xs text-gray-300"></p>
     </div>
   </div>
 
@@ -799,6 +805,7 @@
       updateDateDisplays();
       startAlarmChecker();
       initGlobalEventListeners();
+      initAccountControls();
 
       const splash = document.getElementById('splash-screen');
       if (splash) {
@@ -818,6 +825,8 @@
 
     let supabaseClient = null;
     let pushAuthUserId = null;
+    let accountService = null;
+    let authMode = 'login';
 
     function isPushConfigured() {
       const config = window.CAREER_MODE_SUPABASE;
@@ -1312,25 +1321,100 @@
       }
     }
 
-    function handleOnboardingSubmit(e) {
-      e.preventDefault();
-      playSound('success');
-      appData.user = {
-        email: document.getElementById('onboarding-email').value.trim(),
-        name: document.getElementById('onboarding-username').value.trim(),
-        dob: document.getElementById('onboarding-dob').value,
-        avatar: tempAvatarBase64 || appData.user?.avatar || null,
-        onboarded: true,
-        weeklyReport: true
-      };
-      saveLocalStorageData();
-      closeModal('modal-onboarding');
-      
-      setTimeout(() => {
-        checkNotificationPermission();
-      }, 300);
+    function initAccountControls() {
+      const loginButton = document.getElementById('auth-mode-login');
+      const registerButton = document.getElementById('auth-mode-register');
+      const details = document.getElementById('auth-register-details');
+      const submit = document.getElementById('auth-submit');
+      function setMode(mode) {
+        authMode = mode;
+        details.classList.toggle('hidden', mode !== 'register');
+        document.getElementById('onboarding-username').required = mode === 'register';
+        document.getElementById('onboarding-dob').required = mode === 'register';
+        submit.textContent = mode === 'register' ? 'Criar minha conta' : 'Entrar na minha conta';
+        loginButton.classList.toggle('bg-cyan-500', mode === 'login');
+        registerButton.classList.toggle('bg-cyan-500', mode === 'register');
+        document.getElementById('auth-reset-password').classList.toggle('hidden', mode === 'register');
+        document.getElementById('auth-status').textContent = '';
+      }
+      loginButton.addEventListener('click', () => setMode('login'));
+      registerButton.addEventListener('click', () => setMode('register'));
+      document.getElementById('auth-reset-password').addEventListener('click', async () => {
+        const email = document.getElementById('onboarding-email').value.trim();
+        const status = document.getElementById('auth-status');
+        if (!email) { status.textContent = 'Informe seu e-mail primeiro.'; return; }
+        try {
+          await getAccountService().resetPassword(email, window.location.origin + window.location.pathname);
+          status.textContent = 'Se o endereço estiver cadastrado, você receberá instruções por e-mail.';
+        } catch (error) { status.textContent = 'Não foi possível solicitar a recuperação agora.'; console.error(error); }
+      });
+      setMode('login');
+    }
 
-      renderAll();
+    function getAccountService() {
+      if (!accountService) {
+        const config = window.CAREER_MODE_SUPABASE;
+        if (!config?.url || !config?.anonKey || !window.supabase?.createClient) {
+          throw new Error('Supabase não configurado.');
+        }
+        if (!supabaseClient) supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+        accountService = window.CareerModeAccountService.makeService(supabaseClient);
+      }
+      return accountService;
+    }
+
+    async function handleOnboardingSubmit(e) {
+      e.preventDefault();
+      const status = document.getElementById('auth-status');
+      const submit = document.getElementById('auth-submit');
+      const email = document.getElementById('onboarding-email').value.trim();
+      const password = document.getElementById('onboarding-password').value;
+      submit.disabled = true;
+      status.textContent = 'Aguarde...';
+      try {
+        const service = getAccountService();
+        if (authMode === 'register') {
+          const name = document.getElementById('onboarding-username').value.trim();
+          if (!name || password.length < 6) throw new Error('Informe o nome e uma senha de pelo menos 6 caracteres.');
+          const result = await service.register(email, password, { name });
+          if (!result.session) {
+            status.textContent = 'Verifique seu e-mail para confirmar a conta antes de entrar.';
+            return;
+          }
+        } else {
+          await service.login(email, password);
+        }
+        const user = await service.requireUser();
+        const cloud = await service.readState();
+        if (cloud.state) {
+          appData = { ...appData, ...cloud.state };
+        } else {
+          // First login: keep local data as a recovery copy, import only after
+          // explicit user confirmation to avoid cross-account data leakage.
+          const pending = await service.importLocalIfCloudEmpty();
+          if (pending.pendingImport && window.confirm('Importar os dados deste aparelho para sua conta?')) {
+            const result = await service.confirmImport(pending.pendingImport);
+            appData = { ...appData, ...result.state };
+          }
+        }
+        appData.user = {
+          ...appData.user, email: user.email,
+          name: appData.user?.name || user.user_metadata?.name || '',
+          onboarded: true
+        };
+        delete appData.user.password;
+        saveLocalStorageData();
+        pushAuthUserId = user.id;
+        document.getElementById('modal-onboarding').classList.add('hidden');
+        renderAll();
+        status.textContent = '';
+        // Do not alter the existing iPhone push subscription during auth migration.
+      } catch (error) {
+        console.error('Erro de autenticação:', error);
+        status.textContent = error.message || 'Falha ao autenticar.';
+      } finally {
+        submit.disabled = false;
+      }
     }
 
     function handleEditProfileSubmit(e) {
