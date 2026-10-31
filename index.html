@@ -995,6 +995,8 @@
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
+          if (parsed.user) delete parsed.user.password;
+          delete parsed.password;
           appData = { ...appData, ...parsed };
           if (!appData.checkin) appData.checkin = { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 };
           if (!appData.notifications) appData.notifications = { checkinEnabled: true, checkinTime: '20:00' };
@@ -1003,6 +1005,7 @@
     }
 
     function saveLocalStorageData() {
+      if (appData.user) delete appData.user.password;
       localStorage.setItem('cm_career_mode_app_data', JSON.stringify(appData));
     }
 
