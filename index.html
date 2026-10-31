@@ -1043,7 +1043,8 @@
         }
       } catch (error) {
         console.error('Falha ao ativar notificações:', error);
-        showToast('Não foi possível ativar', 'Verifique a configuração de notificações e tente novamente.');
+        const detail = [error?.code, error?.message].filter(Boolean).join(' — ');
+        showToast('Não foi possível ativar', detail ? detail.slice(0, 180) : 'Verifique a configuração de notificações e tente novamente.');
       } finally {
         closeModal('modal-notif-permission');
       }
