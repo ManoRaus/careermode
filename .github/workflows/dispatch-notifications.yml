@@ -1,0 +1,26 @@
+name: Dispatch Career Mode notifications
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Supabase notification dispatcher
+        env:
+          SUPABASE_FUNCTION_URL: https://lnaygncepocctzoazrzn.supabase.co/functions/v1/dispatch-notifications
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing repository secret: CRON_SECRET"
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            --data '{}' \
+            "$SUPABASE_FUNCTION_URL"
