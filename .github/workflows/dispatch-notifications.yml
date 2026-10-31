@@ -1,8 +1,6 @@
 name: Dispatch Career Mode notifications
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
