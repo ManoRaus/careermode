@@ -409,7 +409,7 @@
           </div>
 
           <div class="space-y-3">
-            <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Catálogo Pré-Determinado (Pontuação Fixa)</h4>
+            <h4 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Catálogo de Tarefas</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="template-tasks-grid"></div>
           </div>
 
@@ -584,7 +584,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-1">Nome de Usuário</label>
-            <input type="text" id="onboarding-username" required placeholder="Ex: Raul" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
+            <input type="text" id="onboarding-username" required placeholder="Digite seu nome" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white">
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-300 mb-1">Data de Nascimento</label>
@@ -621,7 +621,7 @@
           <input type="text" id="task-title" required placeholder="Ex: Ler livro 📖" class="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-400 mb-1">Categoria (Pontuação Automática Fixa)</label>
+          <label class="block text-xs font-semibold text-gray-400 mb-1">Categoria</label>
           <select id="task-category" class="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white">
             <option value="Atividade Física">Atividade Física (10 pts)</option>
             <option value="Saúde">Saúde (10 pts)</option>
@@ -777,7 +777,7 @@
 
     let appData = {
       version: '4.1',
-      user: { name: '', email: '', password: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
+      user: { name: '', email: '', dob: '', avatar: null, onboarded: false, weeklyReport: true },
       tasks: [],
       alarms: [],
       journal: [],
@@ -995,6 +995,8 @@
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
+          if (parsed.user) delete parsed.user.password;
+          delete parsed.password;
           appData = { ...appData, ...parsed };
           if (!appData.checkin) appData.checkin = { lastCheckinDate: null, streakDays: 0, totalCheckins: 0 };
           if (!appData.notifications) appData.notifications = { checkinEnabled: true, checkinTime: '20:00' };
@@ -1003,6 +1005,7 @@
     }
 
     function saveLocalStorageData() {
+      if (appData.user) delete appData.user.password;
       localStorage.setItem('cm_career_mode_app_data', JSON.stringify(appData));
     }
 
@@ -1314,7 +1317,6 @@
       playSound('success');
       appData.user = {
         email: document.getElementById('onboarding-email').value.trim(),
-        password: document.getElementById('onboarding-password').value,
         name: document.getElementById('onboarding-username').value.trim(),
         dob: document.getElementById('onboarding-dob').value,
         avatar: tempAvatarBase64 || appData.user?.avatar || null,
@@ -1355,7 +1357,8 @@
     }
 
     function renderAll() {
-      loadLocalStorageData();
+      // Render from the current in-memory state; do not overwrite remote updates.
+
       renderUserProfile();
       const stats = calculateStats();
 
@@ -1493,7 +1496,7 @@
       if (tpl) {
         playSound('success');
         const points = categoryPointsMap[tpl.category] || 5;
-        appData.tasks.push({ id: 'task_' + Date.now(), title: tpl.title, category: tpl.category, points, completedToday: false });
+        appData.tasks.push({ id: 'task_' + (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random().toString(36).slice(2)), title: tpl.title, category: tpl.category, points, completedToday: false });
         saveLocalStorageData();
         renderAll();
         showToast("Tarefa Adicionada", tpl.title);
