@@ -1017,6 +1017,28 @@
       }
     }
 
+    function newTaskId() {
+      return 'task_' + (window.crypto?.randomUUID?.() || Date.now() + '_' + Math.random().toString(36).slice(2));
+    }
+
+    function commitTaskChange(mutator) {
+      const previous = JSON.stringify(appData.tasks || []);
+      try {
+        if (!Array.isArray(appData.tasks)) appData.tasks = [];
+        const result = mutator(appData.tasks);
+        if (result === false) return false;
+        saveLocalStorageData();
+        renderAll();
+        return true;
+      } catch (error) {
+        appData.tasks = JSON.parse(previous);
+        console.error('Falha ao salvar tarefa', error);
+        renderAll();
+        showToast('Não foi possível salvar', 'Verifique o armazenamento do aparelho.');
+        return false;
+      }
+    }
+
     function saveLocalStorageData() {
       if (appData.user) delete appData.user.password;
       localStorage.setItem('cm_career_mode_app_data', JSON.stringify(appData));
@@ -1502,9 +1524,11 @@
         playSound('click');
       }
 
-      task.completedToday = !task.completedToday;
-      saveLocalStorageData();
-      renderAll();
+      commitTaskChange(tasks => {
+        const current = tasks.find(t => t.id === taskId);
+        if (!current) return false;
+        current.completedToday = !current.completedToday;
+      });
     }
 
     function renderHomeTasks() {
@@ -1600,13 +1624,13 @@
 
     function addTemplateTask(tplId) {
       const tpl = templateTasks.find(t => t.id === tplId);
-      if (tpl) {
+      if (!tpl) return;
+      const points = categoryPointsMap[tpl.category] || 5;
+      if (commitTaskChange(tasks => {
+        tasks.push({ id: newTaskId(), title: tpl.title, category: tpl.category, points, completedToday: false });
+      })) {
         playSound('success');
-        const points = categoryPointsMap[tpl.category] || 5;
-        appData.tasks.push({ id: 'task_' + (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random().toString(36).slice(2)), title: tpl.title, category: tpl.category, points, completedToday: false });
-        saveLocalStorageData();
-        renderAll();
-        showToast("Tarefa Adicionada", tpl.title);
+        showToast('Tarefa adicionada', tpl.title);
       }
     }
 
@@ -1623,10 +1647,11 @@
     function confirmRemoveTask(taskId) {
       showConfirmModal("Deseja realmente excluir esta tarefa?", () => {
         playSound('delete');
-        appData.tasks = appData.tasks.filter(t => t.id !== taskId);
-        saveLocalStorageData();
-        renderAll();
-        showToast("Removido", "Tarefa excluída.");
+        if (commitTaskChange(tasks => {
+          const index = tasks.findIndex(t => t.id === taskId);
+          if (index < 0) return false;
+          tasks.splice(index, 1);
+        })) showToast('Removido', 'Tarefa excluída.');
       });
     }
 
@@ -1643,36 +1668,25 @@
       const title = normalizeTaskTitle(titleInput.value);
       const category = document.getElementById('task-category').value;
       const points = categoryPointsMap[category] || 5;
-
       if (!title) {
         titleInput.setCustomValidity('Informe um título para a tarefa.');
         titleInput.reportValidity();
         titleInput.setCustomValidity('');
         return;
       }
-
-      try {
-        if (!Array.isArray(appData.tasks)) appData.tasks = [];
+      const saved = commitTaskChange(tasks => {
         if (editId) {
-          const task = appData.tasks.find(t => t.id === editId);
-          if (task) {
-            task.title = title;
-            task.category = category;
-            task.points = points;
-          }
+          const task = tasks.find(t => t.id === editId);
+          if (!task) return false;
+          Object.assign(task, { title, category, points });
         } else {
-          appData.tasks.push({ id: 'task_' + Date.now(), title, category, points, completedToday: false });
+          tasks.push({ id: newTaskId(), title, category, points, completedToday: false });
         }
-
-        saveLocalStorageData();
-        closeModal('modal-task');
-        renderAll();
-        playSound('success');
-        showToast("Sucesso!", editId ? "Tarefa atualizada." : "Nova tarefa adicionada.");
-      } catch (error) {
-        console.error('Erro ao salvar tarefa:', error);
-        showToast("Não foi possível salvar", "Tente novamente. Seus dados anteriores foram preservados.");
-      }
+      });
+      if (!saved) return;
+      closeModal('modal-task');
+      playSound('success');
+      showToast('Sucesso!', editId ? 'Tarefa atualizada.' : 'Nova tarefa adicionada.');
     }
 
     function renderRankingTab() {
