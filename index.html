@@ -813,14 +813,9 @@
         setTimeout(() => splash.remove(), 300);
       }
 
-      if (!appData.user || !appData.user.onboarded) {
-        openOnboardingModal();
-      } else {
-        document.getElementById('modal-onboarding').classList.add('hidden');
-        checkNotificationPermission();
-      }
-
+      openOnboardingModal();
       renderAll();
+      restoreAccountSession();
     });
 
     let supabaseClient = null;
@@ -1318,6 +1313,23 @@
           }
         };
         reader.readAsDataURL(file);
+      }
+    }
+
+    async function restoreAccountSession() {
+      try {
+        const service = getAccountService();
+        const user = await service.requireUser();
+        const cloud = await service.readState();
+        if (cloud.state) appData = { ...appData, ...cloud.state };
+        appData.user = { ...appData.user, email: user.email,
+          name: appData.user?.name || user.user_metadata?.name || '', onboarded: true };
+        delete appData.user.password;
+        pushAuthUserId = user.id;
+        document.getElementById('modal-onboarding').classList.add('hidden');
+        renderAll();
+      } catch (error) {
+        document.getElementById('modal-onboarding').classList.remove('hidden');
       }
     }
 
