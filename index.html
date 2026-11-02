@@ -800,6 +800,9 @@
     window.addEventListener('DOMContentLoaded', () => {
       loadLocalStorageData();
       checkDailyReset();
+      window.addEventListener('focus', () => { if (checkDailyReset()) renderAll(); });
+      document.addEventListener('visibilitychange', () => { if (!document.hidden && checkDailyReset()) renderAll(); });
+      setInterval(() => { if (checkDailyReset()) renderAll(); }, 30000);
       initializePushBackend();
       renderNavigation();
       updateDateDisplays();
@@ -854,6 +857,7 @@
           if (latest.state && latest.revision > syncRevision && !syncPending && !syncBusy) {
             appData = { ...appData, ...latest.state };
             syncRevision = latest.revision;
+            checkDailyReset();
             renderAll();
           }
         } catch (err) { console.warn('Falha ao receber atualização remota', err); }
@@ -982,15 +986,25 @@
       }));
       const reminder = appData.notifications || { checkinEnabled: true, checkinTime: '20:00' };
       schedules.push({
-        user_id: pushAuthUserId,
-        source_id: 'checkin-daily',
+        user_id: pushAuthUserId, source_id: 'checkin-daily',
         title: 'Hora do seu Check-in! 🎯',
         body: 'Reserve um momento para registrar seu progresso de hoje no Career Mode.',
         local_time: reminder.checkinTime || '20:00',
-        time_zone: timeZone,
-        app_url: window.location.origin + window.location.pathname,
-        enabled: reminder.checkinEnabled !== false
+        time_zone: timeZone, app_url: window.location.origin + window.location.pathname,
+        enabled: false
       });
+      for (let hour = 8; hour <= 22; hour += 2) {
+        schedules.push({
+          user_id: pushAuthUserId,
+          source_id: 'invite-' + String(hour).padStart(2, '0'),
+          title: 'Career Mode • Hora de evoluir! 🎯',
+          body: 'Que tal voltar ao Career Mode e avançar nas suas tarefas?',
+          local_time: String(hour).padStart(2, '0') + ':00',
+          time_zone: timeZone,
+          app_url: window.location.origin + window.location.pathname,
+          enabled: reminder.checkinEnabled !== false
+        });
+      }
       const { error } = await supabaseClient.from('notification_schedules').upsert(
         schedules, { onConflict: 'user_id,source_id' }
       );
@@ -1008,7 +1022,7 @@
       }
       try {
         await syncPushSchedules();
-        showToast('Lembrete salvo', enabled ? 'Check-in diário às ' + time + '.' : 'Lembrete diário desativado.');
+        showToast('Lembrete salvo', enabled ? 'Convites a cada 2 horas, das 08h às 22h.' : 'Convites desativados.');
       } catch (error) {
         console.error('Erro ao sincronizar lembrete:', error);
         showToast('Salvo neste dispositivo', 'Conecte as notificações push para sincronizar o lembrete.');
@@ -1139,7 +1153,9 @@
         if (appData.alarms) appData.alarms.forEach(alarm => alarm.firedToday = false);
         appData.lastActiveDate = todayStr;
         saveLocalStorageData();
+        return true;
       }
+      return false;
     }
 
     let toastHideTimer = null;
@@ -1420,6 +1436,7 @@
         const cloud = await service.readState();
         if (!cloud.state) { document.getElementById('modal-onboarding').classList.remove('hidden'); return; } // Require explicit first-time import.
         appData = { ...appData, ...cloud.state };
+        checkDailyReset();
         appData.user = { ...appData.user, email: user.email,
           name: appData.user?.name || user.user_metadata?.name || '', onboarded: true };
         delete appData.user.password;
