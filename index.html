@@ -1436,12 +1436,12 @@
         const cloud = await service.readState();
         if (!cloud.state) { document.getElementById('modal-onboarding').classList.remove('hidden'); return; } // Require explicit first-time import.
         appData = { ...appData, ...cloud.state };
-        checkDailyReset();
         appData.user = { ...appData.user, email: user.email,
           name: appData.user?.name || user.user_metadata?.name || '', onboarded: true };
         delete appData.user.password;
         pushAuthUserId = user.id;
         startAccountSync(user, cloud);
+        checkDailyReset();
         document.getElementById('modal-onboarding').classList.add('hidden');
         renderAll();
       } catch (error) {
