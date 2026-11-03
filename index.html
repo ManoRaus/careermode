@@ -464,21 +464,19 @@
               <button type="button" id="btn-enable-push" class="px-4 py-2.5 bg-cyan-500 text-gray-950 rounded-xl text-xs font-extrabold">Ativar notificações</button>
             </div>
             <div>
-              <h4 class="font-bold text-white">Lembrete de Check-in Diário</h4>
-              <p class="text-xs text-gray-400 mt-1">Receba um lembrete mesmo quando o Career Mode estiver fechado.</p>
+              <h4 class="font-bold text-white">Convites automáticos</h4>
+              <p class="text-xs text-gray-400 mt-1">Receba convites a cada 2 horas, das 08h às 22h, mesmo com o aplicativo fechado.</p>
             </div>
             <div class="flex flex-col sm:flex-row sm:items-center gap-3">
               <label class="flex items-center gap-2 text-sm text-gray-300">
                 <input id="checkin-reminder-enabled" type="checkbox" class="!w-4 !h-4 accent-cyan-500">
-                Ativar lembrete diário
+                Ativar convites a cada 2 horas
               </label>
               <div class="flex items-center gap-2 sm:ml-auto">
-                <label for="checkin-reminder-time" class="text-xs text-gray-400">Horário</label>
-                <input id="checkin-reminder-time" type="time" value="20:00" class="!w-32 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white">
                 <button type="button" id="btn-save-checkin-reminder" class="px-3 py-2 bg-cyan-500 text-gray-950 rounded-lg text-xs font-bold">Salvar</button>
               </div>
             </div>
-            <p class="text-[11px] text-gray-500">Horário padrão: 20:00. Você pode alterá-lo quando quiser.</p>
+            <p class="text-[11px] text-gray-500">Horários fixos: 08h, 10h, 12h, 14h, 16h, 18h, 20h e 22h.</p>
           </div>
           <div class="space-y-3" id="alarms-list-container"></div>
         </section>
@@ -1013,8 +1011,7 @@
 
     async function saveCheckinReminderSettings() {
       const enabled = document.getElementById('checkin-reminder-enabled').checked;
-      const time = document.getElementById('checkin-reminder-time').value || '20:00';
-      appData.notifications = { checkinEnabled: enabled, checkinTime: time };
+      appData.notifications = { ...appData.notifications, checkinEnabled: enabled };
       saveLocalStorageData();
       if (!supabaseClient || !pushAuthUserId) {
         showToast('Salvo neste dispositivo', 'Ative as notificações push para programar o envio em segundo plano.');
@@ -1831,9 +1828,7 @@
     function renderAlarmsTab() {
       const reminder = appData.notifications || { checkinEnabled: true, checkinTime: '20:00' };
       const enabledInput = document.getElementById('checkin-reminder-enabled');
-      const timeInput = document.getElementById('checkin-reminder-time');
       if (enabledInput) enabledInput.checked = reminder.checkinEnabled !== false;
-      if (timeInput) timeInput.value = reminder.checkinTime || '20:00';
       const container = document.getElementById('alarms-list-container');
       const alarms = appData.alarms || [];
       if (alarms.length === 0) { container.innerHTML = `<p class="text-xs text-gray-500">Nenhum alarme configurado.</p>`; return; }
