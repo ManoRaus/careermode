@@ -212,14 +212,11 @@
 <body class="h-full flex flex-col md:flex-row bg-dark-bg text-gray-100 select-none">
 
   <!-- SPLASH SCREEN -->
-  <div id="splash-screen" class="fixed inset-0 bg-[#090d16] z-50 flex flex-col items-center justify-center p-6 text-center space-y-6 transition-opacity duration-300">
-    <div class="w-24 h-24 rounded-3xl bg-[#090d16] border border-cyan-500/30 flex items-center justify-center shadow-2xl shadow-cyan-500/40 p-3">
+  <div id="splash-screen" role="status" aria-label="Carregando Career Mode" class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 text-center transition-opacity duration-300" style="background:#0284c7;position:fixed;inset:0;z-index:9999;">
+    <div class="w-32 h-32 rounded-3xl bg-[#090d16] border border-white/30 flex items-center justify-center shadow-2xl p-4">
       <img src="Logo CM.svg" alt="Logo CM" class="w-full h-full object-contain">
     </div>
-    <div class="space-y-2">
-      <h1 class="text-2xl md:text-3xl font-extrabold text-white font-heading tracking-wide">CM - Career Mode</h1>
-      <p class="text-cyan-400 font-medium text-sm md:text-base">Seja bem vindo ao Recomeço.</p>
-    </div>
+    <p class="text-white/90 text-sm font-semibold tracking-widest">CARREGANDO...</p>
   </div>
 
   <!-- MODAL DE PERMISSÃO DE NOTIFICAÇÃO -->
@@ -818,14 +815,20 @@
       });
 
       const splash = document.getElementById('splash-screen');
-      if (splash) {
-        splash.style.opacity = '0';
-        setTimeout(() => splash.remove(), 300);
-      }
+      const splashStartedAt = performance.now();
+      const finishSplash = () => {
+        if (!splash || !splash.isConnected) return;
+        const elapsed = performance.now() - splashStartedAt;
+        setTimeout(() => {
+          splash.style.opacity = '0';
+          setTimeout(() => splash.remove(), 350);
+        }, Math.max(0, 650 - elapsed));
+      };
 
       openOnboardingModal();
       renderAll();
-      restoreAccountSession();
+      Promise.resolve(restoreAccountSession()).finally(finishSplash);
+      setTimeout(finishSplash, 8000);
     });
 
     let supabaseClient = null;
