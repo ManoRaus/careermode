@@ -1464,6 +1464,9 @@
           button.classList.toggle('text-gray-950', selected);
           button.classList.toggle('bg-gray-800', !selected);
           button.classList.toggle('text-white', !selected);
+          // Inline colors override conflicting utility backgrounds on mobile Safari.
+          button.style.backgroundColor = selected ? '#06b6d4' : '#1f2937';
+          button.style.color = selected ? '#030712' : '#ffffff';
           button.setAttribute('aria-pressed', String(selected));
         }
         document.getElementById('auth-reset-password').classList.toggle('hidden', mode === 'register');
