@@ -1441,6 +1441,8 @@
         delete appData.user.password;
         pushAuthUserId = user.id;
         startAccountSync(user, cloud);
+        try { await syncPushSchedules(); }
+        catch (pushError) { console.warn('Falha ao atualizar convites push:', pushError); }
         checkDailyReset();
         document.getElementById('modal-onboarding').classList.add('hidden');
         renderAll();
