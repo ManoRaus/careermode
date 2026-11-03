@@ -1459,8 +1459,13 @@
         document.getElementById('onboarding-username').required = mode === 'register';
         document.getElementById('onboarding-dob').required = false;
         submit.textContent = mode === 'register' ? 'Criar minha conta' : 'Entrar na minha conta';
-        loginButton.classList.toggle('bg-cyan-500', mode === 'login');
-        registerButton.classList.toggle('bg-cyan-500', mode === 'register');
+        for (const [button, selected] of [[loginButton, mode === 'login'], [registerButton, mode === 'register']]) {
+          button.classList.toggle('bg-cyan-500', selected);
+          button.classList.toggle('text-gray-950', selected);
+          button.classList.toggle('bg-gray-800', !selected);
+          button.classList.toggle('text-white', !selected);
+          button.setAttribute('aria-pressed', String(selected));
+        }
         document.getElementById('auth-reset-password').classList.toggle('hidden', mode === 'register');
         document.getElementById('auth-status').textContent = '';
       }
