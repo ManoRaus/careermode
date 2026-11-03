@@ -825,7 +825,8 @@
         }, Math.max(0, 1800 - elapsed));
       };
 
-      openOnboardingModal();
+      // Não exiba o login antes de verificar se existe uma sessão válida.
+      // restoreAccountSession abre o formulário somente quando necessário.
       renderAll();
       Promise.resolve(restoreAccountSession()).finally(finishSplash);
       setTimeout(finishSplash, 8000);
