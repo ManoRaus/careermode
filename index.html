@@ -1665,16 +1665,16 @@
 
       container.innerHTML = tasks.map((task) => `
         <div class="task-item glass-card p-4 rounded-2xl border flex items-center justify-between gap-4 ${task.completedToday ? 'border-cyan-500/35 bg-cyan-500/5 opacity-70' : 'border-gray-800'}">
-          <div class="flex items-center gap-3">
-            <button type="button" data-task-id="${task.id}" class="task-check-btn w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${task.completedToday ? 'border-cyan-400 bg-cyan-500/20 text-cyan-400' : 'border-gray-600 hover:border-cyan-400'}">
+          <div class="flex items-center gap-3 flex-1 min-w-0">
+            <button type="button" data-task-id="${task.id}" class="task-check-btn shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${task.completedToday ? 'border-cyan-400 bg-cyan-500/20 text-cyan-400' : 'border-gray-600 hover:border-cyan-400'}">
               ${task.completedToday ? '<i data-lucide="check" class="w-4 h-4"></i>' : ''}
             </button>
-            <div>
-              <p class="font-medium text-sm md:text-base ${task.completedToday ? 'line-through text-gray-400' : 'text-gray-100'}">${escapeHtml(task.title)}</p>
+            <div class="min-w-0 flex-1">
+              <p class="break-words font-medium text-sm md:text-base ${task.completedToday ? 'line-through text-gray-400' : 'text-gray-100'}">${escapeHtml(task.title)}</p>
               <span class="text-xs text-gray-500">${task.category}</span>
             </div>
           </div>
-          <span class="px-3 py-1 text-xs font-bold rounded-lg ${task.completedToday ? 'bg-cyan-500/20 text-cyan-300' : 'bg-gray-800 text-gray-300'}">+${task.points} pts</span>
+          <span class="shrink-0 whitespace-nowrap inline-flex items-center justify-center px-3 py-1 text-xs font-bold rounded-lg ${task.completedToday ? 'bg-cyan-500/20 text-cyan-300' : 'bg-gray-800 text-gray-300'}">+${task.points} pts</span>
         </div>
       `).join('');
 
